@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import HomePage from './pages/Homepage';
+import HomePage from './pages/HomePage';
 import MainPage from './pages/MainPage';
 import FloorPlanPage from './pages/FloorPlanPage';
 import ShaderTransition from './components/ShaderTransition';
@@ -37,8 +37,6 @@ const App = () => {
   const handleTransitionMidpoint = useCallback(() => {
     if (nextPageRef.current) {
       setCurrentPage(nextPageRef.current);
-      // Optional: Scroll to top on page change
-      window.scrollTo(0, 0);
     }
   }, []);
 
@@ -56,10 +54,7 @@ const App = () => {
   }, []);
 
   return (
-    /* FIX: Changed h-screen to min-h-screen 
-       FIX: Removed overflow-hidden to allow the browser to scroll
-    */
-    <div className="relative w-full min-h-screen">
+    <div className="relative w-full h-screen overflow-hidden">
       {/* Page Container */}
       <div className="w-full h-full">
         {currentPage === 'home' && <HomePage onExplore={navigateToMain} />}
@@ -78,10 +73,7 @@ const App = () => {
         )}
       </div>
 
-      {/* GLSL Shader Transition 
-          Note: Ensure this component uses 'fixed' positioning so it 
-          stays visible even if the user has scrolled down.
-      */}
+      {/* GLSL Shader Transition */}
       <ShaderTransition 
         isActive={isTransitioning}
         onComplete={handleTransitionMidpoint}

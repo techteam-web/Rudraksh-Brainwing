@@ -91,6 +91,27 @@ const HomePage = ({ onExplore }) => {
     };
   }, []);
 
+  // Set initial states immediately on mount (before loading completes)
+  useEffect(() => {
+    // Hide all elements immediately so they don't flash
+    gsap.set(logoRef.current, { opacity: 0, x: -80 });
+    gsap.set(soundControlsRef.current, { opacity: 0, x: -50 });
+    gsap.set(cardRef.current, { opacity: 0, scale: 0.9, y: 50 });
+    gsap.set(heroTextRef.current, { opacity: 0, y: 30 });
+    gsap.set(heroSubRef.current, { opacity: 0, y: 30 });
+    gsap.set(taglineRef.current, { opacity: 0, y: 20 });
+    gsap.set(buttonRef.current, { opacity: 0, scale: 0.8, y: 20 });
+    gsap.set(buttonGlowRef.current, { opacity: 0 });
+    gsap.set(glowOrbRef.current, { opacity: 0, scale: 0.8 });
+    gsap.set(auraBurstRef.current, { scale: 0, opacity: 0 });
+    orbsRef.current.forEach(orb => {
+      if (orb) gsap.set(orb, { opacity: 0, scale: 0 });
+    });
+    particlesRef.current.forEach(particle => {
+      if (particle) gsap.set(particle, { opacity: 0 });
+    });
+  }, []);
+
   // Loading animation
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -113,18 +134,33 @@ const HomePage = ({ onExplore }) => {
   const startRevealAnimation = () => {
     const masterTl = gsap.timeline();
     
-    masterTl.fromTo(auraBurstRef.current, { scale: 0, opacity: 0.8 }, { scale: 3, opacity: 0, duration: 1.5, ease: "power2.out" }, 0);
-    masterTl.fromTo(logoRef.current, { opacity: 0, x: -80 }, { opacity: 1, x: 0, duration: 1, ease: "power3.out" }, 0.2);
-    masterTl.fromTo(soundControlsRef.current, { opacity: 0, x: -50 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, 0.5);
-    masterTl.fromTo(cardRef.current, { opacity: 0, scale: 0.9, y: 50 }, { opacity: 1, scale: 1, y: 0, duration: 1.2, ease: "power3.out" }, 0.4);
-    masterTl.fromTo(heroTextRef.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 0.8);
-    masterTl.fromTo(heroSubRef.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 1.0);
-    masterTl.fromTo(taglineRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 1.2);
-    masterTl.fromTo(buttonRef.current, { opacity: 0, scale: 0.8, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.8, ease: "elastic.out(1, 0.7)" }, 1.4);
-    masterTl.fromTo(buttonGlowRef.current, { opacity: 0 }, { opacity: 0.6, duration: 0.6 }, 1.6);
+    // Aura burst
+    masterTl.to(auraBurstRef.current, { scale: 3, opacity: 0.8, duration: 0.1, ease: "none" }, 0);
+    masterTl.to(auraBurstRef.current, { scale: 3, opacity: 0, duration: 1.4, ease: "power2.out" }, 0.1);
+    
+    // Animate elements in using .to() since initial states are already set
+    masterTl.to(logoRef.current, { opacity: 1, x: 0, duration: 1, ease: "power3.out" }, 0.2);
+    masterTl.to(soundControlsRef.current, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, 0.5);
+    masterTl.to(cardRef.current, { opacity: 1, scale: 1, y: 0, duration: 1.2, ease: "power3.out" }, 0.4);
+    masterTl.to(heroTextRef.current, { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 0.8);
+    masterTl.to(heroSubRef.current, { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 1.0);
+    masterTl.to(taglineRef.current, { opacity: 1, y: 0, duration: 1, ease: "power3.out" }, 1.2);
+    masterTl.to(buttonRef.current, { opacity: 1, scale: 1, y: 0, duration: 0.8, ease: "elastic.out(1, 0.7)" }, 1.4);
+    masterTl.to(buttonGlowRef.current, { opacity: 0.6, duration: 0.6 }, 1.6);
     masterTl.to(glowOrbRef.current, { opacity: 0.4, scale: 1, duration: 2, ease: "power2.out" }, 0.5);
-    masterTl.fromTo(orbsRef.current, { opacity: 0, scale: 0 }, { opacity: 0.3, scale: 1, duration: 1.2, stagger: 0.15, ease: "elastic.out(1, 0.5)" }, 0.6);
-    masterTl.fromTo(particlesRef.current, { opacity: 0 }, { opacity: 0.5, duration: 1.5, stagger: 0.03 }, 1);
+    
+    // Orbs and particles
+    orbsRef.current.forEach((orb, i) => {
+      if (orb) {
+        masterTl.to(orb, { opacity: 0.3, scale: 1, duration: 1.2, ease: "elastic.out(1, 0.5)" }, 0.6 + i * 0.15);
+      }
+    });
+    
+    particlesRef.current.forEach((particle, i) => {
+      if (particle) {
+        masterTl.to(particle, { opacity: 0.5, duration: 1.5 }, 1 + i * 0.03);
+      }
+    });
 
     startContinuousAnimations();
   };
@@ -163,11 +199,14 @@ const HomePage = ({ onExplore }) => {
   };
 
   const handleButtonClick = () => {
-    const exitTl = gsap.timeline({ onComplete: () => onExplore && onExplore() });
-    exitTl
-      .to(buttonRef.current, { scale: 1.2, duration: 0.2, ease: "power2.in" })
-      .to(auraBurstRef.current, { scale: 5, opacity: 0.8, duration: 0.5, ease: "power2.out" }, 0)
-      .to(containerRef.current, { scale: 1.05, filter: "blur(10px)", opacity: 0, duration: 0.6, ease: "power3.in" }, 0.2);
+    gsap.to(buttonRef.current, { 
+      scale: 1.1, 
+      duration: 0.15, 
+      ease: "power2.out",
+      onComplete: () => {
+        onExplore && onExplore();
+      }
+    });
   };
 
   const addToOrbs = (el) => { if (el && !orbsRef.current.includes(el)) orbsRef.current.push(el); };
@@ -201,24 +240,24 @@ const HomePage = ({ onExplore }) => {
       </div>
 
       {/* Aura Burst Effect */}
-      <div ref={auraBurstRef} className="fixed w-[100px] h-[100px] rounded-full opacity-0" style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%) scale(0)", background: `radial-gradient(circle, ${colors.textPrimary} 0%, transparent 70%)`, pointerEvents: "none", zIndex: 90 }} />
+      <div ref={auraBurstRef} className="fixed w-[100px] h-[100px] rounded-full" style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%) scale(0)", background: `radial-gradient(circle, ${colors.textPrimary} 0%, transparent 70%)`, pointerEvents: "none", zIndex: 90, opacity: 0 }} />
 
       {/* Background Glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div ref={glowOrbRef} className="absolute w-[300px] sm:w-[450px] md:w-[600px] h-[300px] sm:h-[450px] md:h-[600px] rounded-full opacity-0" style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%) scale(0.8)", background: "radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(245, 240, 235, 0.05) 40%, transparent 70%)", filter: "blur(50px)" }} />
+        <div ref={glowOrbRef} className="absolute w-[300px] sm:w-[450px] md:w-[600px] h-[300px] sm:h-[450px] md:h-[600px] rounded-full" style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%) scale(0.8)", background: "radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(245, 240, 235, 0.05) 40%, transparent 70%)", filter: "blur(50px)", opacity: 0 }} />
       </div>
 
       {/* Floating Orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
         {[...Array(4)].map((_, i) => (
-          <div key={`orb-${i}`} ref={addToOrbs} className="absolute rounded-full opacity-0" style={{ width: `${80 + i * 40}px`, height: `${80 + i * 40}px`, left: `${10 + i * 20}%`, top: `${15 + i * 15}%`, background: `radial-gradient(circle, rgba(245, 240, 235, ${0.06 - i * 0.01}) 0%, rgba(255, 255, 255, ${0.03 - i * 0.005}) 50%, transparent 70%)`, filter: "blur(30px)", transform: "scale(0)" }} />
+          <div key={`orb-${i}`} ref={addToOrbs} className="absolute rounded-full" style={{ width: `${80 + i * 40}px`, height: `${80 + i * 40}px`, left: `${10 + i * 20}%`, top: `${15 + i * 15}%`, background: `radial-gradient(circle, rgba(245, 240, 235, ${0.06 - i * 0.01}) 0%, rgba(255, 255, 255, ${0.03 - i * 0.005}) 50%, transparent 70%)`, filter: "blur(30px)", opacity: 0, transform: "scale(0)" }} />
         ))}
       </div>
 
       {/* Particles */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none hidden sm:block" style={{ zIndex: 3 }}>
         {[...Array(15)].map((_, i) => (
-          <div key={`p-${i}`} ref={addToParticles} className="absolute rounded-full opacity-0" style={{ width: `${2 + Math.random() * 3}px`, height: `${2 + Math.random() * 3}px`, backgroundColor: i % 2 === 0 ? colors.textPrimary : colors.textSecondary }} />
+          <div key={`p-${i}`} ref={addToParticles} className="absolute rounded-full" style={{ width: `${2 + Math.random() * 3}px`, height: `${2 + Math.random() * 3}px`, backgroundColor: i % 2 === 0 ? colors.textPrimary : colors.textSecondary, opacity: 0 }} />
         ))}
       </div>
 
@@ -227,7 +266,7 @@ const HomePage = ({ onExplore }) => {
         
         {/* Header */}
         <header className="flex-shrink-0 flex justify-between items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4">
-          <div ref={logoRef} className="flex items-center gap-2 sm:gap-3 md:gap-4 opacity-0">
+          <div ref={logoRef} className="flex items-center gap-2 sm:gap-3 md:gap-4" style={{ opacity: 0 }}>
             <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14">
               <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
                 <circle cx="32" cy="32" r="28" stroke={colors.textPrimary} strokeWidth="0.5" opacity="0.4" />
@@ -253,7 +292,7 @@ const HomePage = ({ onExplore }) => {
         {/* Main Content - Card centered here */}
         <main className="flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 md:px-16">
           
-          {/* THE CARD - This is the main center div you want to edit */}
+          {/* THE CARD */}
           <div
             ref={cardRef}
             className="w-full max-w-5xl xl:max-w-6xl rounded-2xl relative"
@@ -329,7 +368,7 @@ const HomePage = ({ onExplore }) => {
 
               {/* Button */}
               <div className="relative inline-block">
-                <div ref={buttonGlowRef} className="absolute inset-0 rounded-full opacity-0" style={{ background: `radial-gradient(circle, ${colors.glowPrimary} 0%, ${colors.glowSecondary} 50%, transparent 70%)`, filter: "blur(25px)", transform: "scale(1.5)", pointerEvents: "none" }} />
+                <div ref={buttonGlowRef} className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${colors.glowPrimary} 0%, ${colors.glowSecondary} 50%, transparent 70%)`, filter: "blur(25px)", transform: "scale(1.5)", pointerEvents: "none", opacity: 0 }} />
                 <button
                   ref={buttonRef}
                   type="button"
@@ -362,7 +401,7 @@ const HomePage = ({ onExplore }) => {
 
         {/* Footer */}
         <footer className="flex-shrink-0 flex items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4">
-          <div ref={soundControlsRef} className="flex items-center gap-2 sm:gap-3 opacity-0">
+          <div ref={soundControlsRef} className="flex items-center gap-2 sm:gap-3" style={{ opacity: 0 }}>
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 group relative"
@@ -387,7 +426,6 @@ const HomePage = ({ onExplore }) => {
             </span>
           </div>
         </footer>
-
       </div>
     </div>
   );
