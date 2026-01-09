@@ -20,6 +20,9 @@ const MainPage = ({ onClose, onFloorPlanClick, initialRoom }) => {
   const leftArrowRef = useRef(null);
   const rightArrowRef = useRef(null);
 
+  // --- NEW: Ref for Mobile Floor Plan Button ---
+  const mobileFloorPlanRef = useRef(null);
+
   const [activeRoom, setActiveRoom] = useState(initialRoom || "Living");
   const [isMuted, setIsMuted] = useState(false);
 
@@ -135,6 +138,9 @@ const MainPage = ({ onClose, onFloorPlanClick, initialRoom }) => {
       if (leftArrowRef.current) gsap.set(leftArrowRef.current, { opacity: 0, x: -20 });
       if (rightArrowRef.current) gsap.set(rightArrowRef.current, { opacity: 0, x: 20 });
 
+      // --- NEW: Mobile Floor Plan Button Initial State ---
+      if (mobileFloorPlanRef.current) gsap.set(mobileFloorPlanRef.current, { opacity: 0, y: 20, scale: 0.9 });
+
       // Master entrance timeline
       const tl = gsap.timeline({
         defaults: { ease: "power3.out" },
@@ -171,6 +177,9 @@ const MainPage = ({ onClose, onFloorPlanClick, initialRoom }) => {
 
       if (miniMapRef.current) tl.to(miniMapRef.current, { opacity: 1, x: 0, scale: 1, duration: 0.6, ease: "back.out(1.4)" }, "-=0.4");
       if (soundControlsRef.current) tl.to(soundControlsRef.current, { opacity: 1, x: 0, duration: 0.5 }, "-=0.4");
+
+      // --- NEW: Animate Mobile Floor Plan Button In ---
+      if (mobileFloorPlanRef.current) tl.to(mobileFloorPlanRef.current, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.4)" }, "-=0.3");
 
       // Floating sand particles
       particlesRef.current.forEach((particle, i) => {
@@ -812,7 +821,50 @@ const MainPage = ({ onClose, onFloorPlanClick, initialRoom }) => {
             ))}
           </div>
 
-          {/* Mini Map - Soft Warm Theme */}
+          {/* Mobile Floor Plan Button - Visible only on small screens (below md breakpoint) */}
+          <button
+            ref={mobileFloorPlanRef}
+            onClick={onFloorPlanClick}
+            className="md:hidden flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+            style={{
+              background: `
+                radial-gradient(ellipse 70% 50% at 50% 40%, rgba(255, 252, 248, 0.6) 0%, transparent 60%),
+                linear-gradient(155deg, #faf5ef 0%, #f5ebe0 50%, #efe3d5 100%)
+              `,
+              boxShadow: `
+                0 0 0 1px rgba(193, 127, 89, 0.2),
+                0 4px 15px rgba(193, 127, 89, 0.12),
+                0 10px 25px rgba(166, 93, 63, 0.15)
+              `,
+            }}
+            aria-label="View Floor Plan"
+          >
+            {/* Floor Plan Icon - Grid/Layout style */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="w-5 h-5"
+              stroke="#a65d3f"
+              strokeWidth="1.5"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span
+              className="text-xs font-medium whitespace-nowrap"
+              style={{
+                fontFamily: "'Marcellus', serif",
+                color: "#a65d3f",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Floor Plan
+            </span>
+          </button>
+
+          {/* Mini Map - Soft Warm Theme - Hidden on mobile (below md breakpoint) */}
           <div
             ref={miniMapRef}
             onClick={onFloorPlanClick}
