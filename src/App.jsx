@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
-import HomePage from './pages/HomePage';
 import MainPage from './pages/MainPage';
 import FloorPlanPage from './pages/FloorPlanPage';
 import ShaderTransition from './components/ShaderTransition';
+import HomePage from './pages/Homepage';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
