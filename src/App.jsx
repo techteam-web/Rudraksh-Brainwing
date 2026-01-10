@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import MainPage from './pages/MainPage';
 import FloorPlanPage from './pages/FloorPlanPage';
-import ShaderTransition from './components/ShaderTransition';
 import HomePage from './pages/Homepage';
+import PageTransition from './components/PageTransition';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
@@ -40,7 +40,7 @@ const App = () => {
     }
   }, []);
 
-  // Called when shrink animation completes
+  // Called when transition animation completes
   const handleTransitionEnd = useCallback(() => {
     nextPageRef.current = null;
     setIsTransitioning(false);
@@ -48,10 +48,11 @@ const App = () => {
 
   // Handle room selection from floor plan
   const handleRoomSelect = useCallback((roomId) => {
+    if (isTransitioning) return;
     setSelectedRoom(roomId);
     nextPageRef.current = 'main';
     setIsTransitioning(true);
-  }, []);
+  }, [isTransitioning]);
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
@@ -73,11 +74,11 @@ const App = () => {
         )}
       </div>
 
-      {/* GLSL Shader Transition */}
-      <ShaderTransition 
+      {/* GSAP Page Transition */}
+      <PageTransition 
         isActive={isTransitioning}
-        onComplete={handleTransitionMidpoint}
-        onEnd={handleTransitionEnd}
+        onMidpoint={handleTransitionMidpoint}
+        onComplete={handleTransitionEnd}
       />
     </div>
   );
