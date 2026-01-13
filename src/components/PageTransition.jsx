@@ -1,150 +1,67 @@
-import React, { useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
-import { gsap } from 'gsap';
+import React, { useRef } from 'react';
+import {gsap, useGSAP} from "/gsap.config.js"
 
-const PageTransition = forwardRef(({ 
-  isActive, 
-  onMidpoint, 
-  onComplete,
-}, ref) => {
-  const containerRef = useRef(null);
-  const panelsRef = useRef([]);
-  const timelineRef = useRef(null);
-  const hasCalledMidpoint = useRef(false);
 
-  // Reset panels to initial state
-  const resetPanels = () => {
-    panelsRef.current.forEach(panel => {
-      if (panel) {
-        gsap.set(panel, { 
-          x: '-120%', 
-          opacity: 0,
-          immediateRender: true 
-        });
-      }
-    });
-  };
+const PageTransition = ({ isActive, onMidpoint, onComplete }) => {
+  const overlayRef = useRef(null);
 
-  // Cleanup function
-  const cleanup = () => {
-    if (timelineRef.current) {
-      timelineRef.current.kill();
-      timelineRef.current = null;
-    }
-    resetPanels();
-    hasCalledMidpoint.current = false;
-  };
-
-  useLayoutEffect(() => {
-    // Always cleanup first
-    cleanup();
-
+  useGSAP(() => {
     if (!isActive) return;
 
-    const panels = panelsRef.current.filter(Boolean);
-    if (panels.length === 0) return;
+    const overlay = overlayRef.current;
+    if (!overlay) return;
 
-    // Small delay to ensure DOM is ready
-    const startAnimation = () => {
-      hasCalledMidpoint.current = false;
+    const tl = gsap.timeline();
 
-      const tl = gsap.timeline({
-        onComplete: () => {
-          cleanup();
-          onComplete?.();
-        }
-      });
-
-      // Set initial state
-      tl.set(panels, { 
-        x: '-120%', 
+    // Phase 1: Fade in overlay to cover screen
+    tl.fromTo(
+      overlay,
+      { opacity: 0, visibility: 'visible' },
+      {
         opacity: 1,
-        force3D: true,
-      });
-
-      // Animate in
-      tl.to(panels, {
-        x: '0%',
-        duration: 0.6,
-        stagger: 0.05,
+        duration: 0.4,
         ease: 'power2.inOut',
-      });
+      }
+    );
 
-      // Call midpoint
-      tl.call(() => {
-        if (!hasCalledMidpoint.current) {
-          hasCalledMidpoint.current = true;
-          onMidpoint?.();
-        }
-      });
+    // Midpoint: Screen is covered, trigger page swap
+    tl.call(() => {
+      onMidpoint?.();
+    });
 
-      // Hold briefly
-      tl.to({}, { duration: 0.1 });
+    // Small hold
+    tl.to({}, { duration: 0.15 });
 
-      // Animate out
-      tl.to(panels, {
-        x: '120%',
-        duration: 0.5,
-        stagger: 0.04,
-        ease: 'power2.inOut',
-      });
-
-      timelineRef.current = tl;
-    };
-
-    // Use requestAnimationFrame to ensure we're in sync with the browser
-    const rafId = requestAnimationFrame(startAnimation);
+    // Phase 2: Fade out overlay to reveal new page
+    tl.to(overlay, {
+      opacity: 0,
+      duration: 0.4,
+      ease: 'power2.inOut',
+      onComplete: () => {
+        gsap.set(overlay, { visibility: 'hidden' });
+        onComplete?.();
+      },
+    });
 
     return () => {
-      cancelAnimationFrame(rafId);
-      cleanup();
+      tl.kill();
     };
-  }, [isActive, onMidpoint, onComplete]);
-
-  // Expose methods via ref
-  useImperativeHandle(ref, () => ({
-    kill: cleanup
-  }));
-
-  // Always render but hide when not active
-  const panels = [
-    { bg: '#6b5548' },
-    { bg: '#7a6455' },
-    { bg: '#927867' },
-    { bg: '#a88b78' },
-    { bg: '#b99a87' },
-  ];
+  }, { dependencies: [isActive] });
 
   return (
     <div
-      ref={containerRef}
-      className="fixed inset-0 pointer-events-none"
-      style={{ 
-        zIndex: 9999, 
-        overflow: 'hidden',
-        visibility: isActive ? 'visible' : 'hidden',
+      ref={overlayRef}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'linear-gradient(135deg, #927867 0%, #7a6455 50%, #6b5548 100%)',
+        zIndex: 9999,
+        pointerEvents: 'none',
+        opacity: 0,
+        visibility: 'hidden',
       }}
-    >
-      {panels.map((panel, i) => (
-        <div
-          key={i}
-          ref={el => panelsRef.current[i] = el}
-          className="absolute will-change-transform"
-          style={{
-            top: 0,
-            left: '-10%',
-            width: '120%',
-            height: '100%',
-            background: panel.bg,
-            transform: 'translateX(-120%) skewX(-10deg)',
-            opacity: 0,
-            backfaceVisibility: 'hidden',
-          }}
-        />
-      ))}
-    </div>
+    />
   );
-});
-
-PageTransition.displayName = 'PageTransition';
+};
 
 export default PageTransition;

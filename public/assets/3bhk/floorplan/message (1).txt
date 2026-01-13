@@ -1,0 +1,996 @@
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { gsap } from "/gsap.config.js";
+import PanoramaViewer from "../components/PanoramaViewer";
+import Logo from "../components/Logo";
+
+const MainPage = ({
+  onClose,
+  onFloorPlanClick,
+  initialRoom,
+  bhkType = "4bhk",
+  isReady = true,
+}) => {
+  const containerRef = useRef(null);
+  const headerRef = useRef(null);
+  const logoRef = useRef(null);
+  const closeRef = useRef(null);
+  const imageRef = useRef(null);
+  const overlayRef = useRef(null);
+  const navRef = useRef(null);
+  const navItemsRef = useRef([]);
+  const miniMapRef = useRef(null);
+  const soundControlsRef = useRef(null);
+  const vignetteRef = useRef(null);
+  const particlesRef = useRef([]);
+  const animationStartedRef = useRef(false);
+
+  // --- Refs for Arrows ---
+  const leftArrowRef = useRef(null);
+  const rightArrowRef = useRef(null);
+
+  // --- Ref for Mobile Floor Plan Button ---
+  const mobileFloorPlanRef = useRef(null);
+
+  const [activeRoom, setActiveRoom] = useState(initialRoom || "Living");
+  const [isMuted, setIsMuted] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+
+  // Color theme matching FloorPlanPage
+  const colors = {
+    bg: "#927867",
+    textPrimary: "#f5f0eb",
+    textSecondary: "#e8e0d8",
+    textAccent: "#E8C4A0",
+    terracotta: "#c17f59",
+    terracottaDark: "#a65d3f",
+    terracottaLight: "#d4a574",
+  };
+
+  // Get floor plan image path based on BHK type
+  const getFloorPlanImage = useCallback(() => {
+    return bhkType === "3bhk"
+      ? "/assets/3bhk/floorplan/3BHK PLAN Main.webp"
+      : "/assets/4bhk/floorplan/4BHK PLAN Main.webp";
+  }, [bhkType]);
+
+  // Define rooms based on BHK type (for future asset separation)
+  const getRooms = useCallback(() => {
+    const basePath = bhkType === "3bhk" ? "" : "";
+
+    return [
+      { id: "Arrival", image: `${basePath}/rooms/arrival.webp` },
+      { id: "Living", image: `${basePath}/rooms/livingroom.webp` },
+      { id: "Kitchen", image: `${basePath}/rooms/kitchen.webp` },
+      { id: "Bedroom", image: `${basePath}/rooms/bedroom.webp` },
+      { id: "Balcony", image: `${basePath}/rooms/balcony.webp` },
+      {
+        id: "Kids Bedroom 1",
+        image: `${basePath}/marzipano/tiles/0-kids_bedroom_final_01/preview.jpg`,
+        is360: true,
+      },
+      {
+        id: "Kids Bedroom 2",
+        image: `${basePath}/marzipano/tiles/1-kids_bedroom_final_02/preview.jpg`,
+        is360: true,
+      },
+    ];
+  }, [bhkType]);
+
+  const rooms = getRooms();
+
+  // Room images mapping (for static images)
+  const getRoomImages = useCallback(() => {
+    const basePath = bhkType === "3bhk" ? "" : "";
+    return {
+      Arrival: `${basePath}/rooms/arrival.webp`,
+      Living: `${basePath}/rooms/livingroom.webp`,
+      Kitchen: `${basePath}/rooms/kitchen.webp`,
+      Bedroom: `${basePath}/rooms/bedroom.webp`,
+      Balcony: `${basePath}/rooms/balcony.webp`,
+    };
+  }, [bhkType]);
+
+  const roomImages = getRoomImages();
+
+  // 360 panorama rooms mapping
+  const panoramaRooms = {
+    "Kids Bedroom 1": "kids-bedroom-1",
+    "Kids Bedroom 2": "kids-bedroom-2",
+  };
+
+  // Check if current room is a panorama
+  const isPanorama = (roomId) => roomId in panoramaRooms;
+
+  // Room highlights - ADJUST THESE VALUES to match your actual floor plan image
+  // Use the onMouseMove handler below to find exact coordinates
+  const roomHighlights = {
+    Arrival: { x: 14, y: 23 },
+    Living: { x: 37, y: 23 },
+    Kitchen: { x: 37, y: 59 },
+    Bedroom: { x: 60, y: 23 },
+    Balcony: { x: 14, y: 59 },
+    "Kids Bedroom 1": { x: 84, y: 24 },
+    "Kids Bedroom 2": { x: 84, y: 68 },
+  };
+
+  const addToParticles = (el) => {
+    if (el && !particlesRef.current.includes(el)) {
+      particlesRef.current.push(el);
+    }
+  };
+
+  // --- Navigation Logic ---
+  const handleNextRoom = () => {
+    const currentIndex = rooms.findIndex((r) => r.id === activeRoom);
+    const nextIndex = (currentIndex + 1) % rooms.length;
+    handleRoomChange(rooms[nextIndex].id);
+
+    if (rightArrowRef.current) {
+      gsap.fromTo(
+        rightArrowRef.current,
+        { scale: 0.9 },
+        { scale: 1, duration: 0.3, ease: "back.out(3)" }
+      );
+    }
+  };
+
+  const handlePrevRoom = () => {
+    const currentIndex = rooms.findIndex((r) => r.id === activeRoom);
+    const prevIndex = (currentIndex - 1 + rooms.length) % rooms.length;
+    handleRoomChange(rooms[prevIndex].id);
+
+    if (leftArrowRef.current) {
+      gsap.fromTo(
+        leftArrowRef.current,
+        { scale: 0.9 },
+        { scale: 1, duration: 0.3, ease: "back.out(3)" }
+      );
+    }
+  };
+
+  // --- Arrow Hover Animation ---
+  const handleArrowHover = (ref, isEnter) => {
+    if (ref.current) {
+      gsap.to(ref.current, {
+        scale: isEnter ? 1.15 : 1,
+        backgroundColor: isEnter
+          ? "rgba(245, 240, 235, 0.3)"
+          : "rgba(245, 240, 235, 0.15)",
+        boxShadow: isEnter ? "0 0 15px rgba(232, 196, 160, 0.4)" : "none",
+        duration: 0.3,
+        ease: "power2.out",
+      });
+    }
+  };
+
+  // Preload images for smoother experience
+  useEffect(() => {
+    const imageUrls = Object.values(roomImages);
+    let loadedCount = 0;
+
+    const preloadImage = (src) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          loadedCount++;
+          resolve();
+        };
+        img.onerror = () => {
+          loadedCount++;
+          resolve();
+        };
+        img.src = src;
+      });
+    };
+
+    Promise.all(imageUrls.map(preloadImage)).then(() => {
+      setImagesLoaded(true);
+    });
+
+    const timeout = setTimeout(() => setImagesLoaded(true), 1000);
+    return () => clearTimeout(timeout);
+  }, [roomImages]);
+
+  useEffect(() => {
+    navItemsRef.current = [];
+  }, []);
+
+  // Set initial hidden states on mount
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    gsap.set(logoRef.current, { opacity: 0, x: -20 });
+    gsap.set(closeRef.current, { opacity: 0, x: 20 });
+    gsap.set(imageRef.current, { opacity: 0 });
+    gsap.set(overlayRef.current, { opacity: 0 });
+    gsap.set(vignetteRef.current, { opacity: 0 });
+    gsap.set(navRef.current, { opacity: 0, y: 15 });
+    gsap.set(miniMapRef.current, { opacity: 0, scale: 0.95 });
+    gsap.set(soundControlsRef.current, { opacity: 0 });
+    gsap.set(leftArrowRef.current, { opacity: 0 });
+    gsap.set(rightArrowRef.current, { opacity: 0 });
+    gsap.set(mobileFloorPlanRef.current, { opacity: 0, scale: 0.95 });
+  }, []);
+
+  // Run entrance animation when isReady becomes true
+  useEffect(() => {
+    if (!isReady || animationStartedRef.current || !containerRef.current)
+      return;
+
+    animationStartedRef.current = true;
+
+    const tl = gsap.timeline({
+      defaults: { ease: "power2.out" },
+      delay: 0.05,
+    });
+
+    tl.to(imageRef.current, {
+      opacity: 1,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+
+    tl.to(overlayRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
+    tl.to(vignetteRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
+    tl.add(() => logoRef.current?.animateIn({ duration: 0.3, ease: "power2.out" }), "-=0.1");
+    tl.to(closeRef.current, { opacity: 1, x: 0, duration: 0.3 }, "-=0.2");
+    tl.to(navRef.current, { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
+
+    tl.to(leftArrowRef.current, { opacity: 1, duration: 0.2 }, "-=0.1");
+    tl.to(rightArrowRef.current, { opacity: 1, duration: 0.2 }, "-=0.2");
+
+    tl.to(
+      ".carousel-item",
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.3,
+        ease: "power2.out",
+      },
+      "-=0.1"
+    );
+
+    tl.to(
+      miniMapRef.current,
+      { opacity: 1, scale: 1, duration: 0.3 },
+      "-=0.1"
+    );
+    tl.to(soundControlsRef.current, { opacity: 1, duration: 0.2 }, "-=0.1");
+
+    tl.to(
+      mobileFloorPlanRef.current,
+      { opacity: 1, scale: 1, duration: 0.2 },
+      "-=0.1"
+    );
+
+    tl.call(() => {
+      particlesRef.current.forEach((particle) => {
+        if (particle) {
+          gsap.set(particle, {
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            opacity: 0.3,
+            scale: Math.random() * 0.5 + 0.5,
+          });
+
+          gsap.to(particle, {
+            x: `+=${100 + Math.random() * 150}`,
+            y: `-=${50 + Math.random() * 100}`,
+            duration: 10 + Math.random() * 8,
+            delay: Math.random() * 2,
+            repeat: -1,
+            ease: "none",
+            onRepeat: () => {
+              if (particle)
+                gsap.set(particle, {
+                  x: Math.random() * window.innerWidth,
+                  y: window.innerHeight + 20,
+                });
+            },
+          });
+
+          gsap.to(particle, {
+            opacity: Math.random() * 0.4 + 0.1,
+            duration: 3 + Math.random() * 2,
+            yoyo: true,
+            repeat: -1,
+            ease: "sine.inOut",
+          });
+        }
+      });
+    });
+  }, [isReady]);
+
+  const handleRoomChange = (room) => {
+    if (room === activeRoom) return;
+
+    if (imageRef.current) {
+      gsap
+        .timeline()
+        .to(imageRef.current, {
+          opacity: 0.3,
+          scale: 1.02,
+          duration: 0.25,
+          ease: "power2.in",
+        })
+        .call(() => setActiveRoom(room))
+        .to(imageRef.current, {
+          opacity: 1,
+          scale: 1,
+          duration: 0.35,
+          ease: "power2.out",
+        });
+    } else {
+      setActiveRoom(room);
+    }
+
+    const highlight = roomHighlights[room];
+    if (highlight && containerRef.current) {
+      const dot = containerRef.current.querySelector(".minimap-highlight");
+      if (dot) {
+        gsap.to(dot, {
+          left: highlight.x + "%",
+          top: highlight.y + "%",
+          duration: 0.5,
+          ease: "power2.inOut",
+        });
+      }
+    }
+  };
+
+  const handleCloseEnter = () => {
+    if (closeRef.current) {
+      gsap.to(closeRef.current, {
+        rotation: 90,
+        scale: 1.1,
+        backgroundColor: "rgba(245, 240, 235, 0.3)",
+        duration: 0.4,
+        ease: "power2.out",
+      });
+    }
+  };
+
+  const handleCloseLeave = () => {
+    if (closeRef.current) {
+      gsap.to(closeRef.current, {
+        rotation: 0,
+        scale: 1,
+        backgroundColor: "rgba(245, 240, 235, 0.15)",
+        duration: 0.4,
+        ease: "power2.out",
+      });
+    }
+  };
+
+  const handleCarouselItemEnter = (index) => {
+    const item = navItemsRef.current[index];
+    if (item) {
+      gsap.to(item, {
+        scale: 1.05,
+        y: -4,
+        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.25)",
+        duration: 0.15,
+        ease: "power2.out",
+      });
+    }
+  };
+
+  const handleCarouselItemLeave = (index) => {
+    const item = navItemsRef.current[index];
+    if (item) {
+      gsap.to(item, {
+        scale: 1,
+        y: 0,
+        boxShadow: "0 4px 15px rgba(0, 0, 0, 0.15)",
+        duration: 0.15,
+        ease: "power2.out",
+      });
+    }
+  };
+
+  const addToNavItems = (el) => {
+    if (el && !navItemsRef.current.includes(el)) {
+      navItemsRef.current.push(el);
+    }
+  };
+
+  // Debug helper - uncomment to find coordinates for roomHighlights
+  // const handleMiniMapMouseMove = (e) => {
+  //   const rect = e.currentTarget.getBoundingClientRect();
+  //   const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(0);
+  //   const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(0);
+  //   console.log(`x: ${x}, y: ${y}`);
+  // };
+
+  return (
+    <div
+      ref={containerRef}
+      className="min-h-screen w-full relative overflow-hidden"
+      style={{ backgroundColor: colors.bg }}
+    >
+      {/* Google Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Marcellus&display=swap');
+        
+        .carousel-container {
+          perspective: 1000px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        
+        .carousel-container::-webkit-scrollbar {
+          display: none;
+        }
+        
+        .carousel-item {
+          transform-style: preserve-3d;
+          opacity: 0;
+          transform: translateY(15px) scale(0.95);
+        }
+        
+        .carousel-item:hover {
+          transform: translateY(-4px) rotateX(3deg) !important;
+        }
+      `}</style>
+
+      {/* ============================================
+          LAYER 1: Background Image (z-index: 1)
+          ============================================ */}
+      <div ref={imageRef} className="absolute inset-0" style={{ zIndex: 1 }}>
+        {isPanorama(activeRoom) ? (
+          <PanoramaViewer
+            key={activeRoom}
+            sceneId={panoramaRooms[activeRoom]}
+            onHotspotClick={(targetRoom) => handleRoomChange(targetRoom)}
+          />
+        ) : roomImages[activeRoom] ? (
+          <img
+            src={roomImages[activeRoom]}
+            alt={activeRoom + " view"}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ backgroundColor: colors.bg }}
+          >
+            <span style={{ color: colors.textSecondary, opacity: 0.5 }}>
+              Loading...
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================
+          LAYER 2: Overlay (z-index: 2)
+          ============================================ */}
+      <div
+        ref={overlayRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 2 }}
+      />
+
+      {/* ============================================
+          LAYER 3: Warm Vignette (z-index: 3)
+          ============================================ */}
+      <div
+        ref={vignetteRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          zIndex: 3,
+          background: isPanorama(activeRoom)
+            ? `radial-gradient(ellipse 85% 75% at 50% 50%, transparent 40%, rgba(146, 120, 103, 0.3) 65%, rgba(125, 102, 88, 0.5) 85%, rgba(100, 80, 68, 0.6) 100%)`
+            : `radial-gradient(ellipse 80% 70% at 50% 50%, transparent 35%, rgba(146, 120, 103, 0.35) 60%, rgba(125, 102, 88, 0.55) 80%, rgba(100, 80, 68, 0.65) 100%)`,
+        }}
+      />
+
+      {/* ============================================
+          LAYER 4: Decorative Patterns (z-index: 4)
+          ============================================ */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          zIndex: 4,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23f5f0eb' stroke-width='1'%3E%3Ccircle cx='100' cy='100' r='40'/%3E%3Ccircle cx='100' cy='100' r='60'/%3E%3Ccircle cx='100' cy='100' r='80'/%3E%3Cpath d='M100 20 Q120 100 100 180 Q80 100 100 20'/%3E%3Cpath d='M20 100 Q100 80 180 100 Q100 120 20 100'/%3E%3Cpath d='M35 35 Q100 70 165 35 Q130 100 165 165 Q100 130 35 165 Q70 100 35 35'/%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: "200px 200px",
+        }}
+      />
+
+      <div
+        className="fixed left-0 top-0 w-32 h-full pointer-events-none opacity-[0.04]"
+        style={{
+          zIndex: 4,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='150' viewBox='0 0 100 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0 Q0 50 0 100 L0 150 L100 150 L100 100 Q100 50 50 0Z' fill='none' stroke='%23f5f0eb' stroke-width='2'/%3E%3Cpath d='M50 20 Q15 60 15 100 L15 130 L85 130 L85 100 Q85 60 50 20Z' fill='none' stroke='%23f5f0eb' stroke-width='1'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "repeat-y",
+          backgroundSize: "100px 150px",
+        }}
+      />
+
+      <div
+        className="fixed right-0 top-0 w-32 h-full pointer-events-none opacity-[0.04]"
+        style={{
+          zIndex: 4,
+          transform: "scaleX(-1)",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='150' viewBox='0 0 100 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0 Q0 50 0 100 L0 150 L100 150 L100 100 Q100 50 50 0Z' fill='none' stroke='%23f5f0eb' stroke-width='2'/%3E%3Cpath d='M50 20 Q15 60 15 100 L15 130 L85 130 L85 100 Q85 60 50 20Z' fill='none' stroke='%23f5f0eb' stroke-width='1'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "repeat-y",
+          backgroundSize: "100px 150px",
+        }}
+      />
+
+      {/* ============================================
+          LAYER 5: Sand Particles (z-index: 5)
+          ============================================ */}
+      <div
+        className="fixed inset-0 overflow-hidden pointer-events-none"
+        style={{ zIndex: 5 }}
+      >
+        {[...Array(12)].map((_, i) => (
+          <div
+            key={i}
+            ref={addToParticles}
+            className="absolute rounded-full"
+            style={{
+              width: `${3 + Math.random() * 3}px`,
+              height: `${3 + Math.random() * 3}px`,
+              backgroundColor:
+                i % 2 === 0 ? colors.textPrimary : colors.textSecondary,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* ============================================
+          LAYER 9: Premium Top Navbar Gradient (z-index: 9)
+          ============================================ */}
+      <div
+        className="absolute top-0 left-0 right-0 pointer-events-none"
+        style={{
+          zIndex: 9,
+          height: "180px",
+          background: `
+            linear-gradient(
+              to bottom,
+              rgba(146, 120, 103, 1) 0%,
+              rgba(146, 120, 103, 0.98) 8%,
+              rgba(146, 120, 103, 0.94) 18%,
+              rgba(146, 120, 103, 0.85) 28%,
+              rgba(146, 120, 103, 0.72) 38%,
+              rgba(146, 120, 103, 0.56) 48%,
+              rgba(146, 120, 103, 0.38) 58%,
+              rgba(146, 120, 103, 0.22) 68%,
+              rgba(146, 120, 103, 0.1) 80%,
+              rgba(146, 120, 103, 0.03) 92%,
+              transparent 100%
+            )
+          `,
+        }}
+      />
+
+      {/* ============================================
+          LAYER 10: ALL UI ELEMENTS (z-index: 10+)
+          ============================================ */}
+
+      {/* 360 Indicator */}
+      {isPanorama(activeRoom) && (
+        <div
+          className="absolute top-24 left-1/2 transform -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full"
+          style={{
+            zIndex: 20,
+            backgroundColor: "rgba(125, 102, 88, 0.85)",
+            backdropFilter: "blur(10px)",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)",
+            border: "1px solid rgba(245, 240, 235, 0.2)",
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            className="w-5 h-5"
+            stroke={colors.textPrimary}
+            strokeWidth="1.5"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            <path d="M2 12h20" />
+          </svg>
+          <span
+            className="text-xs uppercase tracking-wider"
+            style={{
+              fontFamily: "'Marcellus', serif",
+              color: colors.textPrimary,
+            }}
+          >
+            Drag to explore 360°
+          </span>
+        </div>
+      )}
+
+      {/* --- Left Arrow (Hidden on SM and up) --- */}
+      <button
+        ref={leftArrowRef}
+        onClick={handlePrevRoom}
+        onMouseEnter={() => handleArrowHover(leftArrowRef, true)}
+        onMouseLeave={() => handleArrowHover(leftArrowRef, false)}
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full flex items-center justify-center sm:hidden backdrop-blur-md"
+        aria-label="Previous Room"
+        style={{
+          backgroundColor: "rgba(245, 240, 235, 0.15)",
+          border: "1px solid rgba(245, 240, 235, 0.3)",
+        }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-6 h-6"
+          style={{ stroke: colors.textPrimary }}
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
+
+      {/* --- Right Arrow (Hidden on SM and up) --- */}
+      <button
+        ref={rightArrowRef}
+        onClick={handleNextRoom}
+        onMouseEnter={() => handleArrowHover(rightArrowRef, true)}
+        onMouseLeave={() => handleArrowHover(rightArrowRef, false)}
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full flex items-center justify-center sm:hidden backdrop-blur-md"
+        aria-label="Next Room"
+        style={{
+          backgroundColor: "rgba(245, 240, 235, 0.15)",
+          border: "1px solid rgba(245, 240, 235, 0.3)",
+        }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-6 h-6"
+          style={{ stroke: colors.textPrimary }}
+        >
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </button>
+
+      {/* Header */}
+      <header
+        className="absolute top-0 left-0 right-0 flex justify-between items-center px-6 md:px-10 py-5"
+        style={{ zIndex: 20 }}
+      >
+        {/* Logo */}
+        <Logo ref={logoRef} />
+
+        {/* Close Button */}
+        <button
+          ref={closeRef}
+          onClick={onClose}
+          onMouseEnter={handleCloseEnter}
+          onMouseLeave={handleCloseLeave}
+          className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-full cursor-pointer border"
+          style={{
+            backgroundColor: "rgba(245, 240, 235, 0.15)",
+            borderColor: "rgba(245, 240, 235, 0.3)",
+            backdropFilter: "blur(10px)",
+          }}
+          aria-label="Close"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            className="w-4 h-4 md:w-5 md:h-5"
+            style={{ stroke: colors.textPrimary }}
+          >
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="6" y1="18" x2="18" y2="6" />
+          </svg>
+        </button>
+      </header>
+
+      {/* Bottom Controls */}
+      <div
+        className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-6"
+        style={{ zIndex: 20 }}
+      >
+        <div className="flex items-end justify-between gap-7">
+          {/* Sound Controls - Give it matching width to balance the minimap */}
+          <div ref={soundControlsRef} className="flex items-center gap-3 w-[280px]">
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110"
+              style={{
+                backgroundColor: "rgba(245, 240, 235, 0.15)",
+                backdropFilter: "blur(10px)",
+                boxShadow: "0 4px 15px rgba(0, 0, 0, 0.15)",
+                border: "1px solid rgba(245, 240, 235, 0.2)",
+              }}
+            >
+              {isMuted ? (
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="w-5 h-5"
+                  stroke={colors.textSecondary}
+                  strokeWidth="2"
+                >
+                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                  <line x1="23" y1="9" x2="17" y2="15" />
+                  <line x1="17" y1="9" x2="23" y2="15" />
+                </svg>
+              ) : (
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="w-5 h-5"
+                  stroke={colors.textSecondary}
+                  strokeWidth="2"
+                >
+                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Room Carousel Navigation - HIDDEN ON SMALL SCREENS */}
+          <div
+            ref={navRef}
+            className="carousel-container hidden sm:flex items-center gap-3 md:gap-4 px-5 py-4 rounded-2xl overflow-x-auto max-w-[70vw] md:max-w-none"
+            style={{
+              background: "rgba(125, 102, 88, 0.4)",
+              backdropFilter: "blur(12px)",
+              boxShadow: `
+                0 0 0 1px rgba(245, 240, 235, 0.1),
+                0 4px 15px rgba(0, 0, 0, 0.1),
+                0 10px 30px rgba(0, 0, 0, 0.15)
+              `,
+            }}
+          >
+            {rooms.map((room, index) => (
+              <div
+                key={room.id}
+                ref={addToNavItems}
+                onClick={() => handleRoomChange(room.id)}
+                onMouseEnter={() => handleCarouselItemEnter(index)}
+                onMouseLeave={() => handleCarouselItemLeave(index)}
+                className={`carousel-item flex-shrink-0 cursor-pointer rounded-xl overflow-hidden relative`}
+                style={{
+                  width: "110px",
+                  height: "75px",
+                  boxShadow:
+                    activeRoom === room.id
+                      ? `0 6px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px ${colors.textAccent}`
+                      : "0 4px 15px rgba(0, 0, 0, 0.15)",
+                  transformStyle: "preserve-3d",
+                  transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                }}
+              >
+                {/* Background Image */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500"
+                  style={{
+                    backgroundImage: `url(${room.image})`,
+                    transform:
+                      activeRoom === room.id ? "scale(1.15)" : "scale(1)",
+                  }}
+                />
+                {/* Overlay */}
+                <div
+                  className="absolute inset-0 transition-all duration-300"
+                  style={{
+                    background:
+                      activeRoom === room.id
+                        ? "linear-gradient(to top, rgba(245, 240, 235, 0.9) 0%, transparent 100%)"
+                        : "linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%)",
+                  }}
+                />
+                {/* Content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-end p-2">
+                  {/* 360 indicator */}
+                  {room.is360 && (
+                    <div
+                      className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{
+                        backgroundColor: "rgba(245, 240, 235, 0.9)",
+                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
+                      }}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="w-3 h-3"
+                        stroke={colors.terracotta}
+                        strokeWidth="2"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M2 12h20" />
+                      </svg>
+                    </div>
+                  )}
+                  <span
+                    className="text-[10px] md:text-[11px] font-medium text-center leading-tight"
+                    style={{
+                      fontFamily: "'Marcellus', serif",
+                      textShadow:
+                        activeRoom === room.id
+                          ? "none"
+                          : "0 1px 3px rgba(0,0,0,0.4)",
+                      color:
+                        activeRoom === room.id
+                          ? colors.terracottaDark
+                          : colors.textPrimary,
+                    }}
+                  >
+                    {room.id}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile Floor Plan Button - Visible only on small screens */}
+          <button
+            ref={mobileFloorPlanRef}
+            onClick={onFloorPlanClick}
+            className="md:hidden flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
+            style={{
+              background: "rgba(125, 102, 88, 0.4)",
+              backdropFilter: "blur(12px)",
+              boxShadow: `
+                0 0 0 1px rgba(245, 240, 235, 0.1),
+                0 4px 15px rgba(0, 0, 0, 0.12),
+                0 10px 25px rgba(0, 0, 0, 0.15)
+              `,
+            }}
+            aria-label="View Floor Plan"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="w-5 h-5"
+              stroke={colors.textPrimary}
+              strokeWidth="1.5"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span
+              className="text-xs font-medium whitespace-nowrap"
+              style={{
+                fontFamily: "'Marcellus', serif",
+                color: colors.textPrimary,
+                letterSpacing: "0.05em",
+              }}
+            >
+              Floor Plan
+            </span>
+          </button>
+
+          {/* Mini Map with Floor Plan Image - Hidden on mobile */}
+          <div
+            ref={miniMapRef}
+            onClick={onFloorPlanClick}
+            className="hidden md:block relative w-[280px] h-[180px] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.03] group"
+            style={{
+              background: "rgba(125, 102, 88, 0.4)",
+              backdropFilter: "blur(12px)",
+              boxShadow: `
+                0 0 0 1px rgba(245, 240, 235, 0.1),
+                0 4px 15px rgba(0, 0, 0, 0.12),
+                0 10px 25px rgba(0, 0, 0, 0.15)
+              `,
+            }}
+            // Uncomment the line below to debug and find coordinates for roomHighlights
+            // onMouseMove={handleMiniMapMouseMove}
+          >
+            {/* Floor Plan Image */}
+            <img
+              src={getFloorPlanImage()}
+              alt={`${bhkType.toUpperCase()} Floor Plan`}
+              className="w-full h-full object-cover p-2 rounded-2xl opacity-90 transition-opacity duration-300 group-hover:opacity-70"
+            />
+
+            {/* Hover overlay with text */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 z-10 flex items-center justify-center pointer-events-none">
+              <span
+                className="opacity-0 group-hover:opacity-100 text-sm font-medium transition-all duration-300 px-4 py-2 rounded-full transform scale-90 group-hover:scale-100"
+                style={{
+                  fontFamily: "'Marcellus', serif",
+                  color: colors.textPrimary,
+                  backgroundColor: "rgba(125, 102, 88, 0.9)",
+                  backdropFilter: "blur(4px)",
+                  boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
+                }}
+              >
+                View Floor Plan
+              </span>
+            </div>
+
+            {/* Room Highlight Dot */}
+            <div
+              className="minimap-highlight absolute w-4 h-4 rounded-full border-2"
+              style={{
+                backgroundColor: colors.textAccent,
+                borderColor: colors.textPrimary,
+                boxShadow: `
+                  0 0 8px ${colors.textAccent},
+                  0 0 16px ${colors.textAccent}80,
+                  0 0 24px ${colors.textAccent}40
+                `,
+                left: (roomHighlights[activeRoom]?.x || 50) + "%",
+                top: (roomHighlights[activeRoom]?.y || 50) + "%",
+                transform: "translate(-50%, -50%)",
+                transition: "left 0.5s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                zIndex: 20,
+              }}
+            >
+              {/* Pulse animation ring */}
+              <div
+                className="absolute inset-0 rounded-full animate-ping"
+                style={{
+                  backgroundColor: colors.textAccent,
+                  opacity: 0.4,
+                  animationDuration: "2s",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Corner accents */}
+      <div
+        className="absolute top-30 left-6 w-16 h-16 pointer-events-none opacity-20"
+        style={{ zIndex: 10 }}
+      >
+        <svg viewBox="0 0 60 60" fill="none">
+          <path
+            d="M0,60 L0,20 Q0,0 20,0 L60,0"
+            stroke={colors.textPrimary}
+            strokeWidth="1.5"
+            fill="none"
+          />
+          <circle cx="8" cy="8" r="3" fill={colors.textAccent} />
+        </svg>
+      </div>
+      <div
+        className="absolute top-30 right-6 w-16 h-16 pointer-events-none opacity-20"
+        style={{ zIndex: 10 }}
+      >
+        <svg viewBox="0 0 60 60" fill="none">
+          <path
+            d="M60,60 L60,20 Q60,0 40,0 L0,0"
+            stroke={colors.textPrimary}
+            strokeWidth="1.5"
+            fill="none"
+          />
+          <circle cx="52" cy="8" r="3" fill={colors.textAccent} />
+        </svg>
+      </div>
+
+      {/* Bottom decorative line */}
+      <div
+        className="absolute bottom-0 left-0 right-0 pointer-events-none"
+        style={{ zIndex: 15 }}
+      >
+        <div
+          className="h-px mx-6 md:mx-10 opacity-20"
+          style={{
+            background: `linear-gradient(90deg, transparent 0%, ${colors.textSecondary} 20%, ${colors.textPrimary} 50%, ${colors.textSecondary} 80%, transparent 100%)`,
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default MainPage;

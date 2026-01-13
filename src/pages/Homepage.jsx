@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
+import { useEffect, useRef, useState } from "react";
+import { gsap } from "/gsap.config.js";
+import Logo from "../components/Logo";
 
 const HomePage = ({ onExplore }) => {
   const containerRef = useRef(null);
@@ -195,11 +196,11 @@ const HomePage = ({ onExplore }) => {
     );
 
     // Animate elements in using .to() since initial states are already set
-    masterTl.to(
-      logoRef.current,
-      { opacity: 1, x: 0, duration: 1, ease: "power3.out" },
+    masterTl.add(
+      () => logoRef.current?.animateIn({ duration: 1, ease: "power3.out" }),
       0.2
     );
+
     masterTl.to(
       soundControlsRef.current,
       { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" },
@@ -225,7 +226,7 @@ const HomePage = ({ onExplore }) => {
       { opacity: 1, y: 0, duration: 1, ease: "power3.out" },
       1.2
     );
-    
+
     // Animate BHK cards
     masterTl.to(
       leftCardRef.current,
@@ -237,7 +238,7 @@ const HomePage = ({ onExplore }) => {
       { opacity: 1, x: 0, y: 0, duration: 0.8, ease: "power3.out" },
       1.4
     );
-    
+
     // Animate buttons
     masterTl.to(
       leftButtonRef.current,
@@ -249,9 +250,17 @@ const HomePage = ({ onExplore }) => {
       { opacity: 1, scale: 1, duration: 0.6, ease: "elastic.out(1, 0.7)" },
       1.7
     );
-    masterTl.to(leftButtonGlowRef.current, { opacity: 0.6, duration: 0.6 }, 1.8);
-    masterTl.to(rightButtonGlowRef.current, { opacity: 0.6, duration: 0.6 }, 1.9);
-    
+    masterTl.to(
+      leftButtonGlowRef.current,
+      { opacity: 0.6, duration: 0.6 },
+      1.8
+    );
+    masterTl.to(
+      rightButtonGlowRef.current,
+      { opacity: 0.6, duration: 0.6 },
+      1.9
+    );
+
     masterTl.to(
       glowOrbRef.current,
       { opacity: 0.4, scale: 1, duration: 2, ease: "power2.out" },
@@ -302,7 +311,7 @@ const HomePage = ({ onExplore }) => {
       ease: "sine.inOut",
       delay: 0.5,
     });
-    
+
     gsap.to(glowOrbRef.current, {
       scale: 1.2,
       opacity: 0.3,
@@ -367,7 +376,7 @@ const HomePage = ({ onExplore }) => {
   };
 
   const handleButtonClick = (bhkType) => {
-    const buttonRef = bhkType === '4bhk' ? leftButtonRef : rightButtonRef;
+    const buttonRef = bhkType === "4bhk" ? leftButtonRef : rightButtonRef;
     gsap.to(buttonRef.current, {
       scale: 1.1,
       duration: 0.15,
@@ -556,81 +565,13 @@ const HomePage = ({ onExplore }) => {
       </div>
 
       {/* Main Layout */}
-      <div
-        className="relative h-full flex flex-col"
-        style={{ zIndex: 10 }}
-      >
+      <div className="relative h-full flex flex-col" style={{ zIndex: 10 }}>
         {/* Header */}
-        <header className="flex-shrink-0 flex justify-between items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4">
-          <div
+        <header className="shrink-0 flex justify-between items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4 ">
+          <Logo
             ref={logoRef}
-            className="flex items-center gap-2 sm:gap-3 md:gap-4"
-            style={{ opacity: 0 }}
-          >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14">
-              <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="28"
-                  stroke={colors.textPrimary}
-                  strokeWidth="0.5"
-                  opacity="0.4"
-                />
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="22"
-                  stroke={colors.textPrimary}
-                  strokeWidth="0.3"
-                  opacity="0.3"
-                />
-                <path
-                  d="M32 4C32 4 18 14 18 32C18 50 32 60 32 60"
-                  stroke={colors.textPrimary}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-                <path
-                  d="M32 4C32 4 46 14 46 32C46 50 32 60 32 60"
-                  stroke={colors.textPrimary}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-                <circle cx="32" cy="4" r="3" fill={colors.textPrimary} />
-                <circle cx="32" cy="60" r="3" fill={colors.textPrimary} />
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="4"
-                  fill={colors.textAccent}
-                  opacity="0.9"
-                />
-              </svg>
-            </div>
-            <div className="flex flex-col">
-              <span
-                className="text-sm sm:text-base md:text-lg lg:text-xl font-medium uppercase tracking-[0.2em] sm:tracking-[0.3em]"
-                style={{
-                  fontFamily: "'Cinzel', serif",
-                  color: colors.textPrimary,
-                }}
-              >
-                Rudraksh
-              </span>
-              <span
-                className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.4em]"
-                style={{
-                  fontFamily: "'Marcellus', serif",
-                  color: colors.textSecondary,
-                }}
-              >
-                Apartments
-              </span>
-            </div>
-          </div>
+            className={"w-32 sm:w-40 md:w-48 lg:w-56 xl:w-44 h-auto"}
+          />
         </header>
 
         {/* Main Content - Card centered here */}
@@ -641,7 +582,7 @@ const HomePage = ({ onExplore }) => {
             className="w-full max-w-5xl xl:max-w-6xl rounded-2xl relative"
             style={{
               opacity: 0,
-              background: "rgba(125, 102, 88, 0.5)",
+              background: "rgba(230, 216, 204, 0.05)",
               border: "1px solid rgba(245, 240, 235, 0.15)",
               boxShadow: "0 25px 70px rgba(0, 0, 0, 0.15)",
             }}
@@ -652,7 +593,7 @@ const HomePage = ({ onExplore }) => {
             {/* Card Content */}
             <div className="relative px-4 sm:px-8 md:px-12 lg:px-16 py-6 sm:py-8 md:py-10 text-center">
               {/* Top decorative element */}
-              <div className="flex justify-center mb-3 sm:mb-4">
+              {/* <div className="flex justify-center mb-3 sm:mb-4">
                 <svg
                   viewBox="0 0 150 40"
                   fill="none"
@@ -682,10 +623,10 @@ const HomePage = ({ onExplore }) => {
                     opacity="0.5"
                   />
                 </svg>
-              </div>
+              </div> */}
 
               {/* Rudraksh Icon */}
-              <div className="flex justify-center mb-3 sm:mb-4">
+              {/* <div className="flex justify-center mb-3 sm:mb-4">
                 <svg
                   viewBox="0 0 56 56"
                   fill="none"
@@ -715,10 +656,10 @@ const HomePage = ({ onExplore }) => {
                     opacity="0.9"
                   />
                 </svg>
-              </div>
+              </div> */}
 
               {/* Main Title */}
-              <h1
+              {/* <h1
                 ref={heroTextRef}
                 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-light mb-2 sm:mb-3"
                 style={{
@@ -730,7 +671,7 @@ const HomePage = ({ onExplore }) => {
                 }}
               >
                 RUDRAKSH
-              </h1>
+              </h1> */}
 
               {/* Apartments Subtitle */}
               <div
@@ -776,12 +717,11 @@ const HomePage = ({ onExplore }) => {
               </p>
 
               {/* Two BHK Options Side by Side */}
-              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 md:gap-8 justify-center items-stretch">
-                
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 md:gap-8 justify-center items-stretch w-full max-w-4xl mx-auto px-4 sm:px-0">
                 {/* 4 BHK Card - Left */}
                 <div
                   ref={leftCardRef}
-                  className="bhk-card flex-1 max-w-xs sm:max-w-sm rounded-xl p-4 sm:p-6 md:p-8"
+                  className="bhk-card flex-1 w-full sm:max-w-sm rounded-xl p-4 sm:p-6 md:p-8"
                   style={{
                     opacity: 0,
                     background: "rgba(245, 240, 235, 0.08)",
@@ -855,9 +795,13 @@ const HomePage = ({ onExplore }) => {
                     <button
                       ref={leftButtonRef}
                       type="button"
-                      onClick={() => handleButtonClick('4bhk')}
-                      onMouseEnter={() => handleButtonEnter(leftButtonRef, leftButtonGlowRef)}
-                      onMouseLeave={() => handleButtonLeave(leftButtonRef, leftButtonGlowRef)}
+                      onClick={() => handleButtonClick("4bhk")}
+                      onMouseEnter={() =>
+                        handleButtonEnter(leftButtonRef, leftButtonGlowRef)
+                      }
+                      onMouseLeave={() =>
+                        handleButtonLeave(leftButtonRef, leftButtonGlowRef)
+                      }
                       className="relative w-full px-4 sm:px-6 py-3 sm:py-4 rounded-full overflow-hidden group"
                       style={{
                         background: "rgba(245, 240, 235, 0.15)",
@@ -889,7 +833,7 @@ const HomePage = ({ onExplore }) => {
                 </div>
 
                 {/* Divider - visible on larger screens */}
-                <div 
+                <div
                   className="hidden sm:block w-px self-stretch"
                   style={{
                     background: `linear-gradient(to bottom, transparent, ${colors.textPrimary}40, transparent)`,
@@ -899,7 +843,7 @@ const HomePage = ({ onExplore }) => {
                 {/* 3 BHK Card - Right */}
                 <div
                   ref={rightCardRef}
-                  className="bhk-card flex-1 max-w-xs sm:max-w-sm rounded-xl p-4 sm:p-6 md:p-8"
+                  className="bhk-card flex-1 w-full sm:max-w-sm rounded-xl p-4 sm:p-6 md:p-8"
                   style={{
                     opacity: 0,
                     background: "rgba(245, 240, 235, 0.08)",
@@ -973,9 +917,13 @@ const HomePage = ({ onExplore }) => {
                     <button
                       ref={rightButtonRef}
                       type="button"
-                      onClick={() => handleButtonClick('3bhk')}
-                      onMouseEnter={() => handleButtonEnter(rightButtonRef, rightButtonGlowRef)}
-                      onMouseLeave={() => handleButtonLeave(rightButtonRef, rightButtonGlowRef)}
+                      onClick={() => handleButtonClick("3bhk")}
+                      onMouseEnter={() =>
+                        handleButtonEnter(rightButtonRef, rightButtonGlowRef)
+                      }
+                      onMouseLeave={() =>
+                        handleButtonLeave(rightButtonRef, rightButtonGlowRef)
+                      }
                       className="relative w-full px-4 sm:px-6 py-3 sm:py-4 rounded-full overflow-hidden group"
                       style={{
                         background: "rgba(245, 240, 235, 0.15)",
