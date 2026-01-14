@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { gsap } from "/gsap.config.js";
+import { gsap, useGSAP } from "/gsap.config.js";
 import Logo from "../components/Logo";
 
 const HomePage = ({ onExplore }) => {
@@ -140,20 +140,14 @@ const HomePage = ({ onExplore }) => {
   }, []);
 
   // Loading animation
-  useEffect(() => {
-    const ctx = gsap.context(() => {
+  useGSAP(
+    () => {
       const loadingTl = gsap.timeline({
         onComplete: () => startRevealAnimation(),
       });
-      gsap.to(
-        {},
-        {
-          duration: 2,
-          onUpdate: function () {
-            setLoadingPercent(Math.round(this.progress() * 100));
-          },
-        }
-      );
+
+      const counter = { val: 0 };
+
       loadingTl
         .to(loadingTextRef.current, {
           opacity: 1,
@@ -162,11 +156,31 @@ const HomePage = ({ onExplore }) => {
           ease: "power3.out",
         })
         .to(
-          loadingProgressRef.current,
-          { scaleX: 1, duration: 2, ease: "power2.inOut" },
+          counter,
+          {
+            val: 100,
+            duration: 2,
+            ease: "power2.inOut",
+            onUpdate: () => {
+              if (loadingProgressRef.current) {
+                loadingProgressRef.current.textContent = `${Math.round(
+                  counter.val
+                )}%`;
+              }
+            },
+          },
           0.2
         )
-        .to(loadingTextRef.current, { opacity: 0, y: -30, duration: 0.4 }, 2)
+        // TARGET BOTH REFS HERE to move them up together
+        .to(
+          [loadingTextRef.current, loadingProgressRef.current], 
+          { 
+            opacity: 0, 
+            y: -30, // Moves both up by 30px
+            duration: 0.4 
+          }, 
+          2
+        )
         .to(
           loadingRef.current,
           {
@@ -176,9 +190,9 @@ const HomePage = ({ onExplore }) => {
           },
           2.2
         );
-    }, containerRef);
-    return () => ctx.revert();
-  }, []);
+    },
+    { scope: containerRef }
+  );
 
   const startRevealAnimation = () => {
     const masterTl = gsap.timeline();
@@ -435,6 +449,7 @@ const HomePage = ({ onExplore }) => {
       />
 
       {/* Loading Screen */}
+      <div ref={containerRef}>
       <div
         ref={loadingRef}
         className="fixed inset-0 flex flex-col items-center justify-center"
@@ -444,44 +459,51 @@ const HomePage = ({ onExplore }) => {
           clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
         }}
       >
-        <div className="relative">
+        {/* Added flex-col and items-center here to center children vertically and horizontally */}
+        <div className="relative flex flex-col items-center justify-center">
           <div
             ref={loadingTextRef}
-            className="text-2xl sm:text-3xl md:text-5xl font-light tracking-[0.4em] sm:tracking-[0.6em] uppercase mb-6 sm:mb-8"
+            // Added flex-col and items-center to center the logo and spinner
+            className="flex flex-col items-center mb-6 sm:mb-8"
             style={{
-              fontFamily: "'Cinzel', serif",
-              color: colors.textPrimary,
               opacity: 0,
               transform: "translateY(20px)",
             }}
           >
-            Rudraksh
-          </div>
-          <div
-            className="relative w-48 sm:w-64 h-1 rounded-full overflow-hidden"
-            style={{ backgroundColor: "rgba(245, 240, 235, 0.2)" }}
-          >
-            <div
-              ref={loadingProgressRef}
-              className="absolute inset-y-0 left-0 w-full rounded-full origin-left"
-              style={{
-                transform: "scaleX(0)",
-                background: `linear-gradient(90deg, ${colors.textSecondary}, ${colors.textPrimary}, ${colors.textAccent}, ${colors.textPrimary})`,
-                boxShadow: `0 0 20px ${colors.textPrimary}`,
-              }}
+            {/* Logo Image */}
+            <img
+              src="/assets/common/rudraksh-name.svg"
+              alt="Rudraksh Logo"
+              className="h-12 sm:h-16 mb-6" 
             />
+            
+            {/* Spinner Container - Centered */}
+            <div className="flex items-center justify-center">
+              <img
+                src="/assets/common/rudraksh-chakra.svg"
+                alt="Rudraksh Spinning Loader"
+                className="animate-spin" // Added standard tailwind spin class. Remove if you have a custom one.
+                style={{ animationDuration: "5s" }} // Slower spin override
+              />
+            </div>
           </div>
-          <div
-            className="text-center mt-3 sm:mt-4 text-xs sm:text-sm tracking-[0.3em]"
-            style={{
-              color: colors.textSecondary,
-              fontFamily: "'Marcellus', serif",
-            }}
-          >
-            {loadingPercent}%
+
+          {/* Percentage Counter - Centered */}
+          <div className="flex justify-center items-center w-48 sm:w-64">
+            <span
+              ref={loadingProgressRef}
+              className="text-2xl font-light font-mono tabular-nums tracking-wider"
+              style={{
+                color: colors.textPrimary,
+                textShadow: `0 0 15px ${colors.textAccent}`,
+              }}
+            >
+              0%
+            </span>
           </div>
         </div>
       </div>
+    </div>
 
       {/* Aura Burst Effect */}
       <div

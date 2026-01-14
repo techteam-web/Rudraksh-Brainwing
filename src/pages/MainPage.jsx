@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { gsap } from "/gsap.config.js";
+import { gsap } from "/gsap.config.js"; // Ensure this path is correct for your setup
 import PanoramaViewer from "../components/PanoramaViewer";
 import Logo from "../components/Logo";
 
@@ -59,8 +59,17 @@ const MainPage = ({
 
     return [
       { id: "Arrival", image: `${basePath}/rooms/arrival.webp` },
-      { id: "Living", image: `${basePath}/rooms/livingroom.webp` },
-      { id: "Kitchen", image: `${basePath}/rooms/kitchen.webp` },
+      { 
+        id: "Living", 
+        // Use the Marzipano preview image if available, or keep your static webp
+        image: `${basePath}/marzipano/tiles/0-living/preview.jpg`, 
+        is360: true // ENABLED 360
+      },
+      { 
+        id: "Kitchen", 
+        image: `${basePath}/marzipano/tiles/1-kitchen/preview.jpg`, 
+        is360: true // ENABLED 360
+      },
       { id: "Bedroom", image: `${basePath}/rooms/bedroom.webp` },
       { id: "Balcony", image: `${basePath}/rooms/balcony.webp` },
       {
@@ -74,7 +83,7 @@ const MainPage = ({
         is360: true,
       },
     ];
-  }, [bhkType]);
+  }, [bhkType]); 
 
   const rooms = getRooms();
 
@@ -87,13 +96,17 @@ const MainPage = ({
       Kitchen: `${basePath}/rooms/kitchen.webp`,
       Bedroom: `${basePath}/rooms/bedroom.webp`,
       Balcony: `${basePath}/rooms/balcony.webp`,
+      // Add kids bedrooms if you want a fallback static image
     };
   }, [bhkType]);
 
   const roomImages = getRoomImages();
 
   // 360 panorama rooms mapping
+  // This maps the Room ID (displayed on screen) to the Scene ID (in PanoramaViewer.jsx)
   const panoramaRooms = {
+    "Living": "living", // Maps to 'living' in PanoramaViewer scenes
+    "Kitchen": "kitchen", // Maps to 'kitchen' in PanoramaViewer scenes
     "Kids Bedroom 1": "kids-bedroom-1",
     "Kids Bedroom 2": "kids-bedroom-2",
   };
@@ -102,7 +115,6 @@ const MainPage = ({
   const isPanorama = (roomId) => roomId in panoramaRooms;
 
   // Room highlights - ADJUST THESE VALUES to match your actual floor plan image
-  // Use the onMouseMove handler below to find exact coordinates
   const roomHighlights = {
     Arrival: { x: 14, y: 23 },
     Living: { x: 37, y: 23 },
@@ -395,14 +407,6 @@ const MainPage = ({
     }
   };
 
-  // Debug helper - uncomment to find coordinates for roomHighlights
-  // const handleMiniMapMouseMove = (e) => {
-  //   const rect = e.currentTarget.getBoundingClientRect();
-  //   const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(0);
-  //   const y = ((e.clientY - rect.top) / rect.height * 100).toFixed(0);
-  //   console.log(`x: ${x}, y: ${y}`);
-  // };
-
   return (
     <div
       ref={containerRef}
@@ -488,7 +492,7 @@ const MainPage = ({
       {/* ============================================
           LAYER 4: Decorative Patterns (z-index: 4)
           ============================================ */}
-      <div
+      {/* <div
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
           zIndex: 4,
@@ -516,12 +520,12 @@ const MainPage = ({
           backgroundRepeat: "repeat-y",
           backgroundSize: "100px 150px",
         }}
-      />
+      /> */}
 
       {/* ============================================
           LAYER 5: Sand Particles (z-index: 5)
           ============================================ */}
-      <div
+      {/* <div
         className="fixed inset-0 overflow-hidden pointer-events-none"
         style={{ zIndex: 5 }}
       >
@@ -538,7 +542,7 @@ const MainPage = ({
             }}
           />
         ))}
-      </div>
+      </div> */}
 
       {/* ============================================
           LAYER 9: Premium Top Navbar Gradient (z-index: 9)
@@ -547,7 +551,7 @@ const MainPage = ({
         className="absolute top-0 left-0 right-0 pointer-events-none"
         style={{
           zIndex: 9,
-          height: "180px",
+          height: "90px",
           background: `
             linear-gradient(
               to bottom,
@@ -574,7 +578,7 @@ const MainPage = ({
       {/* 360 Indicator */}
       {isPanorama(activeRoom) && (
         <div
-          className="absolute top-24 left-1/2 transform -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full"
+          className="absolute top-10  left-1/2 transform -translate-x-1/2 flex items-center gap-2 px-2 py-1 rounded-full"
           style={{
             zIndex: 20,
             backgroundColor: "rgba(125, 102, 88, 0.85)",
@@ -595,7 +599,7 @@ const MainPage = ({
             <path d="M2 12h20" />
           </svg>
           <span
-            className="text-xs uppercase tracking-wider"
+            className="text-xs uppercase tracking-normal"
             style={{
               fontFamily: "'Marcellus', serif",
               color: colors.textPrimary,

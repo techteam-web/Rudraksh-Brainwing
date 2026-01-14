@@ -4,8 +4,68 @@ const PanoramaViewer = ({ sceneId, onHotspotClick }) => {
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
 
-  // Scene configurations from data.js
+  // Scene configurations
+  // ------------------------------------------------------------
+  // IMPORTANT: 
+  // 1. Ensure 'tilesPath' points to the correct folder in your public directory.
+  // 2. Adjust 'levels' based on how many levels your Marzipano export has (usually size 256 to 2048 or 4096).
+  // ------------------------------------------------------------
   const scenes = {
+    // --- New Scenes ---
+    'living': {
+      id: 'living_room_scene',
+      // CHANGE THIS PATH to match your folder structure: e.g., /marzipano/tiles/living-room
+      tilesPath: '/marzipano/tiles/0-living', 
+      levels: [
+        { tileSize: 256, size: 256, fallbackOnly: true },
+        { tileSize: 512, size: 512 },
+        { tileSize: 512, size: 1024 },
+        { tileSize: 512, size: 2048 },
+        { tileSize: 512, size: 4096 } 
+      ],
+      faceSize: 2000,
+      initialView: {
+        yaw: 0,
+        pitch: 0,
+        fov: 1.57 // Approx 90 degrees
+      },
+      linkHotspots: [
+        // Example: Link back to Kitchen
+        {
+          yaw: 0.5,
+          pitch: 0,
+          rotation: 0,
+          target: 'Kitchen' 
+        }
+      ]
+    },
+    'kitchen': {
+      id: 'kitchen_scene',
+      // CHANGE THIS PATH to match your folder structure
+      tilesPath: '/marzipano/tiles/1-kitchen', 
+      levels: [
+        { tileSize: 256, size: 256, fallbackOnly: true },
+        { tileSize: 512, size: 512 },
+        { tileSize: 512, size: 1024 },
+        { tileSize: 512, size: 2048 }
+      ],
+      faceSize: 1500,
+      initialView: {
+        yaw: 0,
+        pitch: 0,
+        fov: 1.57
+      },
+      linkHotspots: [
+        // Example: Link to Living
+        {
+          yaw: -0.5,
+          pitch: 0,
+          rotation: Math.PI,
+          target: 'Living'
+        }
+      ]
+    },
+    // --- Existing Scenes ---
     'kids-bedroom-1': {
       id: '0-kids_bedroom_final_01',
       tilesPath: '/marzipano/tiles/0-kids_bedroom_final_01',
@@ -143,6 +203,7 @@ const PanoramaViewer = ({ sceneId, onHotspotClick }) => {
         const sceneConfig = scenes[sceneId];
         if (!sceneConfig) {
           console.error('Scene not found:', sceneId, 'Available scenes:', Object.keys(scenes));
+          // Optional: Render a fallback message or auto-switch to a safe default
           return;
         }
         
