@@ -675,7 +675,7 @@ const MainPage = ({
           </div>
 
           {/* Room Carousel Navigation - HIDDEN ON SMALL SCREENS */}
-          <div
+          {/* <div
             ref={navRef}
             className="carousel-container hidden sm:flex items-center gap-3 md:gap-4 px-5 py-4 rounded-2xl overflow-x-auto max-w-[70vw] md:max-w-none"
             style={{
@@ -687,8 +687,8 @@ const MainPage = ({
                 0 10px 30px rgba(0, 0, 0, 0.15)
               `,
             }}
-          >
-          {/* <div
+          > */}
+          <div
             ref={navRef}
             className="carousel-container hidden sm:flex items-center gap-3 md:gap-4 px-5 py-4 rounded-2xl overflow-x-auto max-w-[70vw] md:max-w-none"
             style={{
@@ -700,7 +700,7 @@ const MainPage = ({
                 0 10px 30px rgba(0, 0, 0, 0.15)
               `,
             }}
-          > */}
+          >
             {rooms.map((room, index) => (
               <div
                 key={room.id}
