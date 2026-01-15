@@ -473,23 +473,7 @@ const MainPage = ({
         ref={overlayRef}
         className="absolute inset-0 pointer-events-none"
         style={{ zIndex: 2 }}
-      />
-
-      {/* ============================================
-          LAYER 3: Warm Vignette (z-index: 3)
-          ============================================ */}
-      {/* <div
-        ref={vignetteRef}
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          zIndex: 3,
-          background: isPanorama(activeRoom)
-            ? `radial-gradient(ellipse 85% 75% at 50% 50%, transparent 40%, rgba(146, 120, 103, 0.3) 65%, rgba(125, 102, 88, 0.5) 85%, rgba(100, 80, 68, 0.6) 100%)`
-            : `radial-gradient(ellipse 80% 70% at 50% 50%, transparent 35%, rgba(146, 120, 103, 0.35) 60%, rgba(125, 102, 88, 0.55) 80%, rgba(100, 80, 68, 0.65) 100%)`,
-        }}
-      /> */}
-
-      
+      />   
 
       {/* ============================================
           LAYER 9: Premium Top Navbar Gradient (z-index: 9)
@@ -695,6 +679,19 @@ const MainPage = ({
             ref={navRef}
             className="carousel-container hidden sm:flex items-center gap-3 md:gap-4 px-5 py-4 rounded-2xl overflow-x-auto max-w-[70vw] md:max-w-none"
             style={{
+              border: "none",
+              backdropFilter: "blur(5px)",
+              boxShadow: `
+                0 0 0 1px rgba(245, 240, 235, 0.1),
+                0 4px 15px rgba(0, 0, 0, 0.1),
+                0 10px 30px rgba(0, 0, 0, 0.15)
+              `,
+            }}
+          >
+          {/* <div
+            ref={navRef}
+            className="carousel-container hidden sm:flex items-center gap-3 md:gap-4 px-5 py-4 rounded-2xl overflow-x-auto max-w-[70vw] md:max-w-none"
+            style={{
               background: "rgba(125, 102, 88, 0.4)",
               backdropFilter: "blur(12px)",
               boxShadow: `
@@ -703,7 +700,7 @@ const MainPage = ({
                 0 10px 30px rgba(0, 0, 0, 0.15)
               `,
             }}
-          >
+          > */}
             {rooms.map((room, index) => (
               <div
                 key={room.id}
@@ -870,7 +867,7 @@ const MainPage = ({
             <div
               className="minimap-highlight absolute w-4 h-4 rounded-full border-2"
               style={{
-                backgroundColor: colors.textAccent,
+                backgroundColor: "rgba(148, 112, 88, 0.9)",
                 borderColor: colors.textPrimary,
                 boxShadow: `
                   0 0 8px ${colors.textAccent},
@@ -896,36 +893,6 @@ const MainPage = ({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Corner accents */}
-      <div
-        className="absolute top-30 left-6 w-16 h-16 pointer-events-none opacity-20"
-        style={{ zIndex: 10 }}
-      >
-        <svg viewBox="0 0 60 60" fill="none">
-          <path
-            d="M0,60 L0,20 Q0,0 20,0 L60,0"
-            stroke={colors.textPrimary}
-            strokeWidth="1.5"
-            fill="none"
-          />
-          <circle cx="8" cy="8" r="3" fill={colors.textAccent} />
-        </svg>
-      </div>
-      <div
-        className="absolute top-30 right-6 w-16 h-16 pointer-events-none opacity-20"
-        style={{ zIndex: 10 }}
-      >
-        <svg viewBox="0 0 60 60" fill="none">
-          <path
-            d="M60,60 L60,20 Q60,0 40,0 L0,0"
-            stroke={colors.textPrimary}
-            strokeWidth="1.5"
-            fill="none"
-          />
-          <circle cx="52" cy="8" r="3" fill={colors.textAccent} />
-        </svg>
       </div>
 
       {/* Bottom decorative line */}
