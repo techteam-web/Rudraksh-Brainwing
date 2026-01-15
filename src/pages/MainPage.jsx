@@ -117,8 +117,8 @@ const MainPage = ({
   // Room highlights - ADJUST THESE VALUES to match your actual floor plan image
   const roomHighlights = {
     Arrival: { x: 14, y: 23 },
-    Living: { x: 37, y: 23 },
-    Kitchen: { x: 37, y: 59 },
+    Living: { x: 44, y: 35 },
+    Kitchen: { x: 51, y: 67 },
     Bedroom: { x: 60, y: 23 },
     Balcony: { x: 14, y: 59 },
     "Kids Bedroom 1": { x: 84, y: 24 },
@@ -478,7 +478,7 @@ const MainPage = ({
       {/* ============================================
           LAYER 3: Warm Vignette (z-index: 3)
           ============================================ */}
-      <div
+      {/* <div
         ref={vignetteRef}
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -487,62 +487,9 @@ const MainPage = ({
             ? `radial-gradient(ellipse 85% 75% at 50% 50%, transparent 40%, rgba(146, 120, 103, 0.3) 65%, rgba(125, 102, 88, 0.5) 85%, rgba(100, 80, 68, 0.6) 100%)`
             : `radial-gradient(ellipse 80% 70% at 50% 50%, transparent 35%, rgba(146, 120, 103, 0.35) 60%, rgba(125, 102, 88, 0.55) 80%, rgba(100, 80, 68, 0.65) 100%)`,
         }}
-      />
-
-      {/* ============================================
-          LAYER 4: Decorative Patterns (z-index: 4)
-          ============================================ */}
-      {/* <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          zIndex: 4,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23f5f0eb' stroke-width='1'%3E%3Ccircle cx='100' cy='100' r='40'/%3E%3Ccircle cx='100' cy='100' r='60'/%3E%3Ccircle cx='100' cy='100' r='80'/%3E%3Cpath d='M100 20 Q120 100 100 180 Q80 100 100 20'/%3E%3Cpath d='M20 100 Q100 80 180 100 Q100 120 20 100'/%3E%3Cpath d='M35 35 Q100 70 165 35 Q130 100 165 165 Q100 130 35 165 Q70 100 35 35'/%3E%3C/g%3E%3C/svg%3E")`,
-          backgroundSize: "200px 200px",
-        }}
-      />
-
-      <div
-        className="fixed left-0 top-0 w-32 h-full pointer-events-none opacity-[0.04]"
-        style={{
-          zIndex: 4,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='150' viewBox='0 0 100 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0 Q0 50 0 100 L0 150 L100 150 L100 100 Q100 50 50 0Z' fill='none' stroke='%23f5f0eb' stroke-width='2'/%3E%3Cpath d='M50 20 Q15 60 15 100 L15 130 L85 130 L85 100 Q85 60 50 20Z' fill='none' stroke='%23f5f0eb' stroke-width='1'/%3E%3C/svg%3E")`,
-          backgroundRepeat: "repeat-y",
-          backgroundSize: "100px 150px",
-        }}
-      />
-
-      <div
-        className="fixed right-0 top-0 w-32 h-full pointer-events-none opacity-[0.04]"
-        style={{
-          zIndex: 4,
-          transform: "scaleX(-1)",
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='150' viewBox='0 0 100 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0 Q0 50 0 100 L0 150 L100 150 L100 100 Q100 50 50 0Z' fill='none' stroke='%23f5f0eb' stroke-width='2'/%3E%3Cpath d='M50 20 Q15 60 15 100 L15 130 L85 130 L85 100 Q85 60 50 20Z' fill='none' stroke='%23f5f0eb' stroke-width='1'/%3E%3C/svg%3E")`,
-          backgroundRepeat: "repeat-y",
-          backgroundSize: "100px 150px",
-        }}
       /> */}
 
-      {/* ============================================
-          LAYER 5: Sand Particles (z-index: 5)
-          ============================================ */}
-      {/* <div
-        className="fixed inset-0 overflow-hidden pointer-events-none"
-        style={{ zIndex: 5 }}
-      >
-        {[...Array(12)].map((_, i) => (
-          <div
-            key={i}
-            ref={addToParticles}
-            className="absolute rounded-full"
-            style={{
-              width: `${3 + Math.random() * 3}px`,
-              height: `${3 + Math.random() * 3}px`,
-              backgroundColor:
-                i % 2 === 0 ? colors.textPrimary : colors.textSecondary,
-            }}
-          />
-        ))}
-      </div> */}
+      
 
       {/* ============================================
           LAYER 9: Premium Top Navbar Gradient (z-index: 9)
