@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback } from "react";
 import { gsap, useGSAP } from "/gsap.config.js";
 import Logo from "../components/Logo";
+import { useNavigate } from "react-router-dom";
 
 const FloorPlanPage = ({
   onClose,
@@ -15,7 +16,11 @@ const FloorPlanPage = ({
   const logoRef = useRef(null);
   const logoContainerRef = useRef(null);
   const closeRef = useRef(null);
+  const navigate = useNavigate()
 
+  const handleClick = () =>{
+    navigate("/")
+  }
   // Reset refs on mount
   useGSAP(
     () => {
@@ -366,6 +371,7 @@ const FloorPlanPage = ({
           <Logo
             ref={logoRef}
             className={"w-32 sm:w-40 md:w-48 lg:w-56 xl:w-44 h-auto"}
+            onClick={handleClick}
           />
         </div>
 
@@ -476,15 +482,7 @@ const FloorPlanPage = ({
                 )}
               </svg>
             </button>
-            <span
-              className="text-[8px] uppercase tracking-[0.2em]"
-              style={{
-                fontFamily: "'Marcellus', serif",
-                color: colors.textSecondary,
-              }}
-            >
-              {isMuted ? "Unmute" : "Sound"}
-            </span>
+            
           </div>
 
           {/* Room Carousel */}

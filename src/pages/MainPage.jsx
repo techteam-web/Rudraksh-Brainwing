@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "/gsap.config.js"; // Ensure this path is correct for your setup
 import PanoramaViewer from "../components/PanoramaViewer";
 import Logo from "../components/Logo";
+import RoomCarousel from "../components/RoomCarousel";
+import { useNavigate } from "react-router-dom";
 
 const MainPage = ({
   onClose,
@@ -16,13 +18,19 @@ const MainPage = ({
   const closeRef = useRef(null);
   const imageRef = useRef(null);
   const overlayRef = useRef(null);
-  const navRef = useRef(null);
-  const navItemsRef = useRef([]);
   const miniMapRef = useRef(null);
   const soundControlsRef = useRef(null);
   const vignetteRef = useRef(null);
   const particlesRef = useRef([]);
   const animationStartedRef = useRef(false);
+  const navigate = useNavigate();
+
+  // Carousel ref (exposes getContainerEl and getItemEls)
+  const carouselRef = useRef(null);
+
+  const handleClick = () => {
+    navigate("/");
+  };
 
   // --- Refs for Arrows ---
   const leftArrowRef = useRef(null);
@@ -53,22 +61,21 @@ const MainPage = ({
       : "/assets/4bhk/floorplan/4BHK PLAN Main.webp";
   }, [bhkType]);
 
-  // Define rooms based on BHK type (for future asset separation)
+  // Define rooms based on BHK type
   const getRooms = useCallback(() => {
     const basePath = bhkType === "3bhk" ? "" : "";
 
     return [
       { id: "Arrival", image: `${basePath}/rooms/arrival.webp` },
-      { 
-        id: "Living", 
-        // Use the Marzipano preview image if available, or keep your static webp
-        image: `${basePath}/marzipano/tiles/0-living/preview.jpg`, 
-        is360: true // ENABLED 360
+      {
+        id: "Living",
+        image: `${basePath}/marzipano/tiles/0-living/preview.jpg`,
+        is360: true,
       },
-      { 
-        id: "Kitchen", 
-        image: `${basePath}/marzipano/tiles/1-kitchen/preview.jpg`, 
-        is360: true // ENABLED 360
+      {
+        id: "Kitchen",
+        image: `${basePath}/marzipano/tiles/1-kitchen/preview.jpg`,
+        is360: true,
       },
       { id: "Bedroom", image: `${basePath}/rooms/bedroom.webp` },
       { id: "Balcony", image: `${basePath}/rooms/balcony.webp` },
@@ -83,7 +90,7 @@ const MainPage = ({
         is360: true,
       },
     ];
-  }, [bhkType]); 
+  }, [bhkType]);
 
   const rooms = getRooms();
 
@@ -96,25 +103,22 @@ const MainPage = ({
       Kitchen: `${basePath}/rooms/kitchen.webp`,
       Bedroom: `${basePath}/rooms/bedroom.webp`,
       Balcony: `${basePath}/rooms/balcony.webp`,
-      // Add kids bedrooms if you want a fallback static image
     };
   }, [bhkType]);
 
   const roomImages = getRoomImages();
 
   // 360 panorama rooms mapping
-  // This maps the Room ID (displayed on screen) to the Scene ID (in PanoramaViewer.jsx)
   const panoramaRooms = {
-    "Living": "living", // Maps to 'living' in PanoramaViewer scenes
-    "Kitchen": "kitchen", // Maps to 'kitchen' in PanoramaViewer scenes
+    Living: "living",
+    Kitchen: "kitchen",
     "Kids Bedroom 1": "kids-bedroom-1",
     "Kids Bedroom 2": "kids-bedroom-2",
   };
 
-  // Check if current room is a panorama
   const isPanorama = (roomId) => roomId in panoramaRooms;
 
-  // Room highlights - ADJUST THESE VALUES to match your actual floor plan image
+  // Room highlights for minimap
   const roomHighlights = {
     Arrival: { x: 14, y: 23 },
     Living: { x: 44, y: 35 },
@@ -141,7 +145,7 @@ const MainPage = ({
       gsap.fromTo(
         rightArrowRef.current,
         { scale: 0.9 },
-        { scale: 1, duration: 0.3, ease: "back.out(3)" }
+        { scale: 1, duration: 0.3, ease: "back.out(3)" },
       );
     }
   };
@@ -155,7 +159,7 @@ const MainPage = ({
       gsap.fromTo(
         leftArrowRef.current,
         { scale: 0.9 },
-        { scale: 1, duration: 0.3, ease: "back.out(3)" }
+        { scale: 1, duration: 0.3, ease: "back.out(3)" },
       );
     }
   };
@@ -175,7 +179,7 @@ const MainPage = ({
     }
   };
 
-  // Preload images for smoother experience
+  // Preload images
   useEffect(() => {
     const imageUrls = Object.values(roomImages);
     let loadedCount = 0;
@@ -203,10 +207,6 @@ const MainPage = ({
     return () => clearTimeout(timeout);
   }, [roomImages]);
 
-  useEffect(() => {
-    navItemsRef.current = [];
-  }, []);
-
   // Set initial hidden states on mount
   useEffect(() => {
     if (!containerRef.current) return;
@@ -216,12 +216,17 @@ const MainPage = ({
     gsap.set(imageRef.current, { opacity: 0 });
     gsap.set(overlayRef.current, { opacity: 0 });
     gsap.set(vignetteRef.current, { opacity: 0 });
-    gsap.set(navRef.current, { opacity: 0, y: 15 });
     gsap.set(miniMapRef.current, { opacity: 0, scale: 0.95 });
     gsap.set(soundControlsRef.current, { opacity: 0 });
     gsap.set(leftArrowRef.current, { opacity: 0 });
     gsap.set(rightArrowRef.current, { opacity: 0 });
     gsap.set(mobileFloorPlanRef.current, { opacity: 0, scale: 0.95 });
+
+    // Set initial state for carousel container
+    const carouselEl = carouselRef.current?.getContainerEl();
+    if (carouselEl) {
+      gsap.set(carouselEl, { opacity: 0, y: 15 });
+    }
   }, []);
 
   // Run entrance animation when isReady becomes true
@@ -244,9 +249,17 @@ const MainPage = ({
 
     tl.to(overlayRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
     tl.to(vignetteRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
-    tl.add(() => logoRef.current?.animateIn({ duration: 0.3, ease: "power2.out" }), "-=0.1");
+    tl.add(
+      () => logoRef.current?.animateIn({ duration: 0.3, ease: "power2.out" }),
+      "-=0.1",
+    );
     tl.to(closeRef.current, { opacity: 1, x: 0, duration: 0.3 }, "-=0.2");
-    tl.to(navRef.current, { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
+
+    // Animate carousel container via ref
+    const carouselEl = carouselRef.current?.getContainerEl();
+    if (carouselEl) {
+      tl.to(carouselEl, { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
+    }
 
     tl.to(leftArrowRef.current, { opacity: 1, duration: 0.2 }, "-=0.1");
     tl.to(rightArrowRef.current, { opacity: 1, duration: 0.2 }, "-=0.2");
@@ -260,20 +273,16 @@ const MainPage = ({
         duration: 0.3,
         ease: "power2.out",
       },
-      "-=0.1"
+      "-=0.1",
     );
 
-    tl.to(
-      miniMapRef.current,
-      { opacity: 1, scale: 1, duration: 0.3 },
-      "-=0.1"
-    );
+    tl.to(miniMapRef.current, { opacity: 1, scale: 1, duration: 0.3 }, "-=0.1");
     tl.to(soundControlsRef.current, { opacity: 1, duration: 0.2 }, "-=0.1");
 
     tl.to(
       mobileFloorPlanRef.current,
       { opacity: 1, scale: 1, duration: 0.2 },
-      "-=0.1"
+      "-=0.1",
     );
 
     tl.call(() => {
@@ -375,38 +384,6 @@ const MainPage = ({
     }
   };
 
-  const handleCarouselItemEnter = (index) => {
-    const item = navItemsRef.current[index];
-    if (item) {
-      gsap.to(item, {
-        scale: 1.05,
-        y: -4,
-        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.25)",
-        duration: 0.15,
-        ease: "power2.out",
-      });
-    }
-  };
-
-  const handleCarouselItemLeave = (index) => {
-    const item = navItemsRef.current[index];
-    if (item) {
-      gsap.to(item, {
-        scale: 1,
-        y: 0,
-        boxShadow: "0 4px 15px rgba(0, 0, 0, 0.15)",
-        duration: 0.15,
-        ease: "power2.out",
-      });
-    }
-  };
-
-  const addToNavItems = (el) => {
-    if (el && !navItemsRef.current.includes(el)) {
-      navItemsRef.current.push(el);
-    }
-  };
-
   return (
     <div
       ref={containerRef}
@@ -416,26 +393,6 @@ const MainPage = ({
       {/* Google Fonts */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Marcellus&display=swap');
-        
-        .carousel-container {
-          perspective: 1000px;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-        
-        .carousel-container::-webkit-scrollbar {
-          display: none;
-        }
-        
-        .carousel-item {
-          transform-style: preserve-3d;
-          opacity: 0;
-          transform: translateY(15px) scale(0.95);
-        }
-        
-        .carousel-item:hover {
-          transform: translateY(-4px) rotateX(3deg) !important;
-        }
       `}</style>
 
       {/* ============================================
@@ -473,7 +430,7 @@ const MainPage = ({
         ref={overlayRef}
         className="absolute inset-0 pointer-events-none"
         style={{ zIndex: 2 }}
-      />   
+      />
 
       {/* ============================================
           LAYER 9: Premium Top Navbar Gradient (z-index: 9)
@@ -509,7 +466,7 @@ const MainPage = ({
       {/* 360 Indicator */}
       {isPanorama(activeRoom) && (
         <div
-          className="absolute top-10  left-1/2 transform -translate-x-1/2 flex items-center gap-2 px-2 py-1 rounded-full"
+          className="absolute top-10 left-1/2 transform -translate-x-1/2 flex items-center gap-2 px-2 py-1 rounded-full"
           style={{
             zIndex: 20,
             backgroundColor: "rgba(125, 102, 88, 0.85)",
@@ -599,7 +556,11 @@ const MainPage = ({
         style={{ zIndex: 20 }}
       >
         {/* Logo */}
-        <Logo ref={logoRef} className={"w-32 sm:w-40 md:w-48 lg:w-56 xl:w-44 h-auto"}/>
+        <Logo
+          ref={logoRef}
+          className={"w-32 sm:w-40 md:w-48 lg:w-56 xl:w-44 h-auto"}
+          onClick={handleClick}
+        />
 
         {/* Close Button */}
         <button
@@ -635,8 +596,11 @@ const MainPage = ({
         style={{ zIndex: 20 }}
       >
         <div className="flex items-end justify-between gap-7">
-          {/* Sound Controls - Give it matching width to balance the minimap */}
-          <div ref={soundControlsRef} className="flex items-center gap-3 w-[280px]">
+          {/* Sound Controls */}
+          <div
+            ref={soundControlsRef}
+            className="flex items-center gap-3 w-[280px]"
+          >
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110"
@@ -674,114 +638,14 @@ const MainPage = ({
             </button>
           </div>
 
-          {/* Room Carousel Navigation - HIDDEN ON SMALL SCREENS */}
-          {/* <div
-            ref={navRef}
-            className="carousel-container hidden sm:flex items-center gap-3 md:gap-4 px-5 py-4 rounded-2xl overflow-x-auto max-w-[70vw] md:max-w-none"
-            style={{
-              border: "none",
-              backdropFilter: "blur(5px)",
-              boxShadow: `
-                0 0 0 1px rgba(245, 240, 235, 0.1),
-                0 4px 15px rgba(0, 0, 0, 0.1),
-                0 10px 30px rgba(0, 0, 0, 0.15)
-              `,
-            }}
-          > */}
-          <div
-            ref={navRef}
-            className="carousel-container hidden sm:flex items-center gap-3 md:gap-4 px-5 py-4 rounded-2xl overflow-x-auto max-w-[70vw] md:max-w-none"
-            style={{
-              background: "rgba(125, 102, 88, 0.4)",
-              backdropFilter: "blur(12px)",
-              boxShadow: `
-                0 0 0 1px rgba(245, 240, 235, 0.1),
-                0 4px 15px rgba(0, 0, 0, 0.1),
-                0 10px 30px rgba(0, 0, 0, 0.15)
-              `,
-            }}
-          >
-            {rooms.map((room, index) => (
-              <div
-                key={room.id}
-                ref={addToNavItems}
-                onClick={() => handleRoomChange(room.id)}
-                onMouseEnter={() => handleCarouselItemEnter(index)}
-                onMouseLeave={() => handleCarouselItemLeave(index)}
-                className={`carousel-item flex-shrink-0 cursor-pointer rounded-xl overflow-hidden relative`}
-                style={{
-                  width: "110px",
-                  height: "75px",
-                  boxShadow:
-                    activeRoom === room.id
-                      ? `0 6px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px ${colors.textAccent}`
-                      : "0 4px 15px rgba(0, 0, 0, 0.15)",
-                  transformStyle: "preserve-3d",
-                  transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                }}
-              >
-                {/* Background Image */}
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500"
-                  style={{
-                    backgroundImage: `url(${room.image})`,
-                    transform:
-                      activeRoom === room.id ? "scale(1.15)" : "scale(1)",
-                  }}
-                />
-                {/* Overlay */}
-                <div
-                  className="absolute inset-0 transition-all duration-300"
-                  style={{
-                    background:
-                      activeRoom === room.id
-                        ? "linear-gradient(to top, rgba(245, 240, 235, 0.9) 0%, transparent 100%)"
-                        : "linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%)",
-                  }}
-                />
-                {/* Content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-end p-2">
-                  {/* 360 indicator */}
-                  {room.is360 && (
-                    <div
-                      className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{
-                        backgroundColor: "rgba(245, 240, 235, 0.9)",
-                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
-                      }}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        className="w-3 h-3"
-                        stroke={colors.terracotta}
-                        strokeWidth="2"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M2 12h20" />
-                      </svg>
-                    </div>
-                  )}
-                  <span
-                    className="text-[10px] md:text-[11px] font-medium text-center leading-tight"
-                    style={{
-                      fontFamily: "'Marcellus', serif",
-                      textShadow:
-                        activeRoom === room.id
-                          ? "none"
-                          : "0 1px 3px rgba(0,0,0,0.4)",
-                      color:
-                        activeRoom === room.id
-                          ? colors.terracottaDark
-                          : colors.textPrimary,
-                    }}
-                  >
-                    {room.id}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Room Carousel Navigation - Extracted Component */}
+          <RoomCarousel
+            ref={carouselRef}
+            rooms={rooms}
+            activeRoom={activeRoom}
+            onRoomChange={handleRoomChange}
+            colors={colors}
+          />
 
           {/* Mobile Floor Plan Button - Visible only on small screens */}
           <button
@@ -837,8 +701,6 @@ const MainPage = ({
                 0 10px 25px rgba(0, 0, 0, 0.15)
               `,
             }}
-            // Uncomment the line below to debug and find coordinates for roomHighlights
-            // onMouseMove={handleMiniMapMouseMove}
           >
             {/* Floor Plan Image */}
             <img
@@ -877,7 +739,8 @@ const MainPage = ({
                 left: (roomHighlights[activeRoom]?.x || 50) + "%",
                 top: (roomHighlights[activeRoom]?.y || 50) + "%",
                 transform: "translate(-50%, -50%)",
-                transition: "left 0.5s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition:
+                  "left 0.5s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                 zIndex: 20,
               }}
             >
