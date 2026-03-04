@@ -62,31 +62,33 @@ const MainPage = ({
   }, [bhkType]);
 
   // Define rooms based on BHK type
+  // Define rooms based on BHK type
   const getRooms = useCallback(() => {
-    const basePath = bhkType === "3bhk" ? "" : "";
+    // FIX: Point the base path to your actual assets folder
+    const basePath = `/assets/${bhkType}`; 
 
     return [
       { id: "Arrival", image: `${basePath}/rooms/arrival.webp` },
       {
         id: "Living",
-        image: `${basePath}/marzipano/tiles/0-living/preview.jpg`,
+        image: `${basePath}/360/tiles/0-living/preview.jpg`, // Updated path
         is360: true,
       },
       {
         id: "Kitchen",
-        image: `${basePath}/marzipano/tiles/1-kitchen/preview.jpg`,
+        image: `${basePath}/360/tiles/1-kitchen/preview.jpg`, // Updated path
         is360: true,
       },
       { id: "Bedroom", image: `${basePath}/rooms/bedroom.webp` },
       { id: "Balcony", image: `${basePath}/rooms/balcony.webp` },
       {
         id: "Kids Bedroom 1",
-        image: `${basePath}/marzipano/tiles/0-kids_bedroom_final_01/preview.jpg`,
+        image: `${basePath}/360/tiles/0-kids_bedroom_final_01/preview.jpg`, // Updated path
         is360: true,
       },
       {
         id: "Kids Bedroom 2",
-        image: `${basePath}/marzipano/tiles/1-kids_bedroom_final_02/preview.jpg`,
+        image: `${basePath}/360/tiles/1-kids_bedroom_final_02/preview.jpg`, // Updated path
         is360: true,
       },
     ];
@@ -96,7 +98,8 @@ const MainPage = ({
 
   // Room images mapping (for static images)
   const getRoomImages = useCallback(() => {
-    const basePath = bhkType === "3bhk" ? "" : "";
+    // FIX: Point the base path to your actual assets folder
+    const basePath = `/assets/${bhkType}`; 
     return {
       Arrival: `${basePath}/rooms/arrival.webp`,
       Living: `${basePath}/rooms/livingroom.webp`,
@@ -466,13 +469,14 @@ const MainPage = ({
       {/* 360 Indicator */}
       {isPanorama(activeRoom) && (
         <div
-          className="absolute top-10 left-1/2 transform -translate-x-1/2 flex items-center gap-2 px-2 py-1 rounded-full"
+          className="absolute top-10 left-1/2 transform -translate-x-1/2 flex items-center gap-2 px-2 py-1 rounded-full hidden md:flex"
           style={{
             zIndex: 20,
             backgroundColor: "rgba(125, 102, 88, 0.85)",
             backdropFilter: "blur(10px)",
             boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)",
             border: "1px solid rgba(245, 240, 235, 0.2)",
+                       
           }}
         >
           <svg
@@ -487,7 +491,7 @@ const MainPage = ({
             <path d="M2 12h20" />
           </svg>
           <span
-            className="text-xs uppercase tracking-normal"
+            className="text-xs uppercase tracking-normal "
             style={{
               fontFamily: "'Marcellus', serif",
               color: colors.textPrimary,

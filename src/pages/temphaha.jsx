@@ -679,7 +679,7 @@ const HomePage = ({ onExplore }) => {
       {/* Main Layout */}
       <div className="relative h-full flex flex-col" style={{ zIndex: 10 }}>
         {/* Header */}
-        <header className="absolute top-0 left-0 right-0 flex justify-between items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4 z-10">
+        <header className="shrink-0 flex justify-between items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4 ">
           <Logo
             ref={logoRef}
             className={"w-32 sm:w-40 md:w-48 lg:w-56 xl:w-44 h-auto"}
@@ -1025,7 +1025,7 @@ const HomePage = ({ onExplore }) => {
         </main>
 
         {/* Footer */}
-        <footer className="absolute bottom-0 left-0 flex items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4">
+        <footer className="flex-shrink-0 flex items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4">
           <div
             ref={soundControlsRef}
             className="flex items-center gap-2 sm:gap-3"
