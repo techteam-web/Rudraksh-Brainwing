@@ -1,9 +1,19 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { gsap } from "/gsap.config.js"; // Ensure this path is correct for your setup
+import { gsap } from "/gsap.config.js";
 import PanoramaViewer from "../components/PanoramaViewer";
 import Logo from "../components/Logo";
+import RoomNav from "../components/RoomNav";
+import MobileRoomNav from "../components/MobileRoomNav";
 import RoomCarousel from "../components/RoomCarousel";
 import { useNavigate } from "react-router-dom";
+import {
+  getCategories,
+  getScenes,
+  getDefaultScene,
+  findSceneById,
+  preloadImages,
+  getPreviewUrls,
+} from "../data/panoConfig";
 
 const MainPage = ({
   onClose,
@@ -13,7 +23,6 @@ const MainPage = ({
   isReady = true,
 }) => {
   const containerRef = useRef(null);
-  const headerRef = useRef(null);
   const logoRef = useRef(null);
   const closeRef = useRef(null);
   const imageRef = useRef(null);
@@ -21,29 +30,41 @@ const MainPage = ({
   const miniMapRef = useRef(null);
   const soundControlsRef = useRef(null);
   const vignetteRef = useRef(null);
-  const particlesRef = useRef([]);
   const animationStartedRef = useRef(false);
   const navigate = useNavigate();
 
-  // Carousel ref (exposes getContainerEl and getItemEls)
+  // Component refs
+  const navRef = useRef(null);
+  const mobileNavRef = useRef(null);
   const carouselRef = useRef(null);
 
-  const handleClick = () => {
-    navigate("/");
-  };
-
-  // --- Refs for Arrows ---
+  // --- Refs for Mobile Arrows ---
   const leftArrowRef = useRef(null);
   const rightArrowRef = useRef(null);
 
   // --- Ref for Mobile Floor Plan Button ---
   const mobileFloorPlanRef = useRef(null);
 
-  const [activeRoom, setActiveRoom] = useState(initialRoom || "Living");
+  // --- State ---
   const [isMuted, setIsMuted] = useState(false);
-  const [imagesLoaded, setImagesLoaded] = useState(false);
 
-  // Color theme matching FloorPlanPage
+  // Navigation state: which category, subcategory, and scene are active
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [activeSubcategory, setActiveSubcategory] = useState(null);
+  const [activeSceneId, setActiveSceneId] = useState(null);
+  const [activeSceneConfig, setActiveSceneConfig] = useState(null);
+
+  // Derived: current scenes for the carousel
+  const [currentScenes, setCurrentScenes] = useState([]);
+
+  // Categories from config
+  const categories = getCategories(bhkType);
+
+  const handleClick = () => {
+    navigate("/");
+  };
+
+  // Color theme
   const colors = {
     bg: "#927867",
     textPrimary: "#f5f0eb",
@@ -54,120 +75,171 @@ const MainPage = ({
     terracottaLight: "#d4a574",
   };
 
-  // Get floor plan image path based on BHK type
+  // Get floor plan image path
   const getFloorPlanImage = useCallback(() => {
     return bhkType === "3bhk"
       ? "/assets/3bhk/floorplan/3BHK PLAN Main.webp"
       : "/assets/4bhk/floorplan/4BHK PLAN Main.webp";
   }, [bhkType]);
 
-  // Define rooms based on BHK type
-  // Define rooms based on BHK type
-  const getRooms = useCallback(() => {
-    // FIX: Point the base path to your actual assets folder
-    const basePath = `/assets/${bhkType}`; 
-
-    return [
-      { id: "Arrival", image: `${basePath}/rooms/arrival.webp` },
-      {
-        id: "Living",
-        image: `${basePath}/360/tiles/0-living/preview.jpg`, // Updated path
-        is360: true,
-      },
-      {
-        id: "Kitchen",
-        image: `${basePath}/360/tiles/1-kitchen/preview.jpg`, // Updated path
-        is360: true,
-      },
-      { id: "Bedroom", image: `${basePath}/rooms/bedroom.webp` },
-      { id: "Balcony", image: `${basePath}/rooms/balcony.webp` },
-      {
-        id: "Kids Bedroom 1",
-        image: `${basePath}/360/tiles/0-kids_bedroom_final_01/preview.jpg`, // Updated path
-        is360: true,
-      },
-      {
-        id: "Kids Bedroom 2",
-        image: `${basePath}/360/tiles/1-kids_bedroom_final_02/preview.jpg`, // Updated path
-        is360: true,
-      },
-    ];
-  }, [bhkType]);
-
-  const rooms = getRooms();
-
-  // Room images mapping (for static images)
-  const getRoomImages = useCallback(() => {
-    // FIX: Point the base path to your actual assets folder
-    const basePath = `/assets/${bhkType}`; 
-    return {
-      Arrival: `${basePath}/rooms/arrival.webp`,
-      Living: `${basePath}/rooms/livingroom.webp`,
-      Kitchen: `${basePath}/rooms/kitchen.webp`,
-      Bedroom: `${basePath}/rooms/bedroom.webp`,
-      Balcony: `${basePath}/rooms/balcony.webp`,
-    };
-  }, [bhkType]);
-
-  const roomImages = getRoomImages();
-
-  // 360 panorama rooms mapping
-  const panoramaRooms = {
-    Living: "living",
-    Kitchen: "kitchen",
-    "Kids Bedroom 1": "kids-bedroom-1",
-    "Kids Bedroom 2": "kids-bedroom-2",
-  };
-
-  const isPanorama = (roomId) => roomId in panoramaRooms;
-
-  // Room highlights for minimap
+  // Room highlights for minimap (you can adjust per scene if needed)
   const roomHighlights = {
-    Arrival: { x: 14, y: 23 },
-    Living: { x: 44, y: 35 },
-    Kitchen: { x: 51, y: 67 },
-    Bedroom: { x: 60, y: 23 },
-    Balcony: { x: 14, y: 59 },
-    "Kids Bedroom 1": { x: 84, y: 24 },
-    "Kids Bedroom 2": { x: 84, y: 68 },
+    living: { x: 44, y: 35 },
+    kitchen: { x: 51, y: 67 },
+    "master-bedroom": { x: 60, y: 23 },
+    "bedroom-1": { x: 84, y: 24 },
+    "bedroom-2": { x: 84, y: 48 },
+    "bedroom-3": { x: 84, y: 68 },
   };
 
-  const addToParticles = (el) => {
-    if (el && !particlesRef.current.includes(el)) {
-      particlesRef.current.push(el);
+  // --- Initialize default scene on mount ---
+  useEffect(() => {
+    const defaultScene = getDefaultScene(bhkType);
+    if (defaultScene) {
+      setActiveCategory(defaultScene.categoryId);
+      setActiveSubcategory(defaultScene.subcategoryId);
+      setActiveSceneId(defaultScene.scene.id);
+      setActiveSceneConfig(defaultScene.scene);
+
+      const scenes = getScenes(
+        bhkType,
+        defaultScene.categoryId,
+        defaultScene.subcategoryId
+      );
+      setCurrentScenes(scenes);
     }
-  };
+  }, [bhkType]);
 
-  // --- Navigation Logic ---
-  const handleNextRoom = () => {
-    const currentIndex = rooms.findIndex((r) => r.id === activeRoom);
-    const nextIndex = (currentIndex + 1) % rooms.length;
-    handleRoomChange(rooms[nextIndex].id);
+  // --- Handle nav category/subcategory selection ---
+  const handleNavSelect = useCallback(
+    (categoryId, subcategoryId) => {
+      setActiveCategory(categoryId);
+      setActiveSubcategory(subcategoryId);
+
+      const scenes = getScenes(bhkType, categoryId, subcategoryId);
+      setCurrentScenes(scenes);
+
+      // Auto-select first scene in the new category
+      if (scenes.length > 0) {
+        setActiveSceneId(scenes[0].id);
+        setActiveSceneConfig(scenes[0]);
+      } else {
+        setActiveSceneId(null);
+        setActiveSceneConfig(null);
+      }
+
+      // Preload all preview images for this category
+      const urls = getPreviewUrls(bhkType, categoryId, subcategoryId);
+      preloadImages(urls);
+    },
+    [bhkType]
+  );
+
+  // --- Handle scene selection from carousel ---
+  const handleSceneSelect = useCallback(
+    (sceneId) => {
+      if (sceneId === activeSceneId) return;
+
+      const scene = currentScenes.find((s) => s.id === sceneId);
+      if (!scene) return;
+
+      // Crossfade animation
+      if (imageRef.current) {
+        gsap
+          .timeline()
+          .to(imageRef.current, {
+            opacity: 0.3,
+            scale: 1.02,
+            duration: 0.25,
+            ease: "power2.in",
+          })
+          .call(() => {
+            setActiveSceneId(sceneId);
+            setActiveSceneConfig(scene);
+          })
+          .to(imageRef.current, {
+            opacity: 1,
+            scale: 1,
+            duration: 0.35,
+            ease: "power2.out",
+          });
+      } else {
+        setActiveSceneId(sceneId);
+        setActiveSceneConfig(scene);
+      }
+
+      // Update minimap dot
+      const catId = activeSubcategory || activeCategory;
+      const highlight = roomHighlights[catId];
+      if (highlight && containerRef.current) {
+        const dot = containerRef.current.querySelector(".minimap-highlight");
+        if (dot) {
+          gsap.to(dot, {
+            left: highlight.x + "%",
+            top: highlight.y + "%",
+            duration: 0.5,
+            ease: "power2.inOut",
+          });
+        }
+      }
+    },
+    [activeSceneId, currentScenes, activeCategory, activeSubcategory]
+  );
+
+  // --- Handle hotspot click (navigate to target scene) ---
+  const handleHotspotClick = useCallback(
+    (targetSceneId) => {
+      const result = findSceneById(bhkType, targetSceneId);
+      if (!result) return;
+
+      const { scene, categoryId, subcategoryId } = result;
+
+      // Update nav state
+      setActiveCategory(categoryId);
+      setActiveSubcategory(subcategoryId);
+
+      // Update carousel scenes
+      const scenes = getScenes(bhkType, categoryId, subcategoryId);
+      setCurrentScenes(scenes);
+
+      // Select the target scene
+      setActiveSceneId(scene.id);
+      setActiveSceneConfig(scene);
+    },
+    [bhkType]
+  );
+
+  // --- Mobile arrow navigation ---
+  const handleNextScene = () => {
+    if (!currentScenes.length) return;
+    const idx = currentScenes.findIndex((s) => s.id === activeSceneId);
+    const next = (idx + 1) % currentScenes.length;
+    handleSceneSelect(currentScenes[next].id);
 
     if (rightArrowRef.current) {
       gsap.fromTo(
         rightArrowRef.current,
         { scale: 0.9 },
-        { scale: 1, duration: 0.3, ease: "back.out(3)" },
+        { scale: 1, duration: 0.3, ease: "back.out(3)" }
       );
     }
   };
 
-  const handlePrevRoom = () => {
-    const currentIndex = rooms.findIndex((r) => r.id === activeRoom);
-    const prevIndex = (currentIndex - 1 + rooms.length) % rooms.length;
-    handleRoomChange(rooms[prevIndex].id);
+  const handlePrevScene = () => {
+    if (!currentScenes.length) return;
+    const idx = currentScenes.findIndex((s) => s.id === activeSceneId);
+    const prev = (idx - 1 + currentScenes.length) % currentScenes.length;
+    handleSceneSelect(currentScenes[prev].id);
 
     if (leftArrowRef.current) {
       gsap.fromTo(
         leftArrowRef.current,
         { scale: 0.9 },
-        { scale: 1, duration: 0.3, ease: "back.out(3)" },
+        { scale: 1, duration: 0.3, ease: "back.out(3)" }
       );
     }
   };
 
-  // --- Arrow Hover Animation ---
   const handleArrowHover = (ref, isEnter) => {
     if (ref.current) {
       gsap.to(ref.current, {
@@ -182,35 +254,7 @@ const MainPage = ({
     }
   };
 
-  // Preload images
-  useEffect(() => {
-    const imageUrls = Object.values(roomImages);
-    let loadedCount = 0;
-
-    const preloadImage = (src) => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          loadedCount++;
-          resolve();
-        };
-        img.onerror = () => {
-          loadedCount++;
-          resolve();
-        };
-        img.src = src;
-      });
-    };
-
-    Promise.all(imageUrls.map(preloadImage)).then(() => {
-      setImagesLoaded(true);
-    });
-
-    const timeout = setTimeout(() => setImagesLoaded(true), 1000);
-    return () => clearTimeout(timeout);
-  }, [roomImages]);
-
-  // Set initial hidden states on mount
+  // --- Set initial hidden states on mount ---
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -218,21 +262,27 @@ const MainPage = ({
     gsap.set(closeRef.current, { opacity: 0, x: 20 });
     gsap.set(imageRef.current, { opacity: 0 });
     gsap.set(overlayRef.current, { opacity: 0 });
-    gsap.set(vignetteRef.current, { opacity: 0 });
+    if (vignetteRef.current) gsap.set(vignetteRef.current, { opacity: 0 });
     gsap.set(miniMapRef.current, { opacity: 0, scale: 0.95 });
     gsap.set(soundControlsRef.current, { opacity: 0 });
     gsap.set(leftArrowRef.current, { opacity: 0 });
     gsap.set(rightArrowRef.current, { opacity: 0 });
     gsap.set(mobileFloorPlanRef.current, { opacity: 0, scale: 0.95 });
 
-    // Set initial state for carousel container
+    // Mobile nav
+    const mobileNavEl = mobileNavRef.current?.getContainerEl();
+    if (mobileNavEl) gsap.set(mobileNavEl, { opacity: 0, scale: 0.95 });
+
+    // Nav container
+    const navEl = navRef.current?.getContainerEl();
+    if (navEl) gsap.set(navEl, { opacity: 0, y: 10 });
+
+    // Carousel container
     const carouselEl = carouselRef.current?.getContainerEl();
-    if (carouselEl) {
-      gsap.set(carouselEl, { opacity: 0, y: 15 });
-    }
+    if (carouselEl) gsap.set(carouselEl, { opacity: 0, y: 15 });
   }, []);
 
-  // Run entrance animation when isReady becomes true
+  // --- Entrance animation ---
   useEffect(() => {
     if (!isReady || animationStartedRef.current || !containerRef.current)
       return;
@@ -244,21 +294,22 @@ const MainPage = ({
       delay: 0.05,
     });
 
-    tl.to(imageRef.current, {
-      opacity: 1,
-      duration: 0.4,
-      ease: "power2.out",
-    });
-
+    tl.to(imageRef.current, { opacity: 1, duration: 0.4, ease: "power2.out" });
     tl.to(overlayRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
-    tl.to(vignetteRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
+
     tl.add(
       () => logoRef.current?.animateIn({ duration: 0.3, ease: "power2.out" }),
-      "-=0.1",
+      "-=0.1"
     );
     tl.to(closeRef.current, { opacity: 1, x: 0, duration: 0.3 }, "-=0.2");
 
-    // Animate carousel container via ref
+    // Nav
+    const navEl = navRef.current?.getContainerEl();
+    if (navEl) {
+      tl.to(navEl, { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
+    }
+
+    // Carousel
     const carouselEl = carouselRef.current?.getContainerEl();
     if (carouselEl) {
       tl.to(carouselEl, { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
@@ -268,101 +319,25 @@ const MainPage = ({
     tl.to(rightArrowRef.current, { opacity: 1, duration: 0.2 }, "-=0.2");
 
     tl.to(
-      ".carousel-item",
-      {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.3,
-        ease: "power2.out",
-      },
-      "-=0.1",
+      miniMapRef.current,
+      { opacity: 1, scale: 1, duration: 0.3 },
+      "-=0.1"
     );
-
-    tl.to(miniMapRef.current, { opacity: 1, scale: 1, duration: 0.3 }, "-=0.1");
     tl.to(soundControlsRef.current, { opacity: 1, duration: 0.2 }, "-=0.1");
-
     tl.to(
       mobileFloorPlanRef.current,
       { opacity: 1, scale: 1, duration: 0.2 },
-      "-=0.1",
+      "-=0.1"
     );
 
-    tl.call(() => {
-      particlesRef.current.forEach((particle) => {
-        if (particle) {
-          gsap.set(particle, {
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-            opacity: 0.3,
-            scale: Math.random() * 0.5 + 0.5,
-          });
-
-          gsap.to(particle, {
-            x: `+=${100 + Math.random() * 150}`,
-            y: `-=${50 + Math.random() * 100}`,
-            duration: 10 + Math.random() * 8,
-            delay: Math.random() * 2,
-            repeat: -1,
-            ease: "none",
-            onRepeat: () => {
-              if (particle)
-                gsap.set(particle, {
-                  x: Math.random() * window.innerWidth,
-                  y: window.innerHeight + 20,
-                });
-            },
-          });
-
-          gsap.to(particle, {
-            opacity: Math.random() * 0.4 + 0.1,
-            duration: 3 + Math.random() * 2,
-            yoyo: true,
-            repeat: -1,
-            ease: "sine.inOut",
-          });
-        }
-      });
-    });
+    // Mobile nav
+    const mobileNavEl = mobileNavRef.current?.getContainerEl();
+    if (mobileNavEl) {
+      tl.to(mobileNavEl, { opacity: 1, scale: 1, duration: 0.2 }, "-=0.15");
+    }
   }, [isReady]);
 
-  const handleRoomChange = (room) => {
-    if (room === activeRoom) return;
-
-    if (imageRef.current) {
-      gsap
-        .timeline()
-        .to(imageRef.current, {
-          opacity: 0.3,
-          scale: 1.02,
-          duration: 0.25,
-          ease: "power2.in",
-        })
-        .call(() => setActiveRoom(room))
-        .to(imageRef.current, {
-          opacity: 1,
-          scale: 1,
-          duration: 0.35,
-          ease: "power2.out",
-        });
-    } else {
-      setActiveRoom(room);
-    }
-
-    const highlight = roomHighlights[room];
-    if (highlight && containerRef.current) {
-      const dot = containerRef.current.querySelector(".minimap-highlight");
-      if (dot) {
-        gsap.to(dot, {
-          left: highlight.x + "%",
-          top: highlight.y + "%",
-          duration: 0.5,
-          ease: "power2.inOut",
-        });
-      }
-    }
-  };
-
+  // Close button handlers
   const handleCloseEnter = () => {
     if (closeRef.current) {
       gsap.to(closeRef.current, {
@@ -387,6 +362,13 @@ const MainPage = ({
     }
   };
 
+  // Current minimap highlight
+  const currentHighlightKey = activeSubcategory || activeCategory;
+  const currentHighlight = roomHighlights[currentHighlightKey] || {
+    x: 50,
+    y: 50,
+  };
+
   return (
     <div
       ref={containerRef}
@@ -399,20 +381,14 @@ const MainPage = ({
       `}</style>
 
       {/* ============================================
-          LAYER 1: Background Image (z-index: 1)
+          LAYER 1: Panorama Background (z-index: 1)
           ============================================ */}
       <div ref={imageRef} className="absolute inset-0" style={{ zIndex: 1 }}>
-        {isPanorama(activeRoom) ? (
+        {activeSceneConfig ? (
           <PanoramaViewer
-            key={activeRoom}
-            sceneId={panoramaRooms[activeRoom]}
-            onHotspotClick={(targetRoom) => handleRoomChange(targetRoom)}
-          />
-        ) : roomImages[activeRoom] ? (
-          <img
-            src={roomImages[activeRoom]}
-            alt={activeRoom + " view"}
-            className="w-full h-full object-cover"
+            key={activeSceneConfig.id}
+            sceneConfig={activeSceneConfig}
+            onHotspotClick={handleHotspotClick}
           />
         ) : (
           <div
@@ -420,7 +396,7 @@ const MainPage = ({
             style={{ backgroundColor: colors.bg }}
           >
             <span style={{ color: colors.textSecondary, opacity: 0.5 }}>
-              Loading...
+              Select a room to explore
             </span>
           </div>
         )}
@@ -436,7 +412,7 @@ const MainPage = ({
       />
 
       {/* ============================================
-          LAYER 9: Premium Top Navbar Gradient (z-index: 9)
+          LAYER 9: Top Navbar Gradient (z-index: 9)
           ============================================ */}
       <div
         className="absolute top-0 left-0 right-0 pointer-events-none"
@@ -463,20 +439,19 @@ const MainPage = ({
       />
 
       {/* ============================================
-          LAYER 10: ALL UI ELEMENTS (z-index: 10+)
+          LAYER 10+: ALL UI ELEMENTS
           ============================================ */}
 
       {/* 360 Indicator */}
-      {isPanorama(activeRoom) && (
+      {activeSceneConfig && (
         <div
-          className="absolute top-10 left-1/2 transform -translate-x-1/2 flex items-center gap-2 px-2 py-1 rounded-full hidden md:flex"
+          className="absolute top-10 left-1/2 transform -translate-x-1/2 items-center gap-2 px-2 py-1 rounded-full hidden md:flex"
           style={{
             zIndex: 20,
             backgroundColor: "rgba(125, 102, 88, 0.85)",
             backdropFilter: "blur(10px)",
             boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)",
             border: "1px solid rgba(245, 240, 235, 0.2)",
-                       
           }}
         >
           <svg
@@ -491,7 +466,7 @@ const MainPage = ({
             <path d="M2 12h20" />
           </svg>
           <span
-            className="text-xs uppercase tracking-normal "
+            className="text-xs uppercase tracking-normal"
             style={{
               fontFamily: "'Marcellus', serif",
               color: colors.textPrimary,
@@ -502,14 +477,14 @@ const MainPage = ({
         </div>
       )}
 
-      {/* --- Left Arrow (Hidden on SM and up) --- */}
+      {/* Mobile Left Arrow */}
       <button
         ref={leftArrowRef}
-        onClick={handlePrevRoom}
+        onClick={handlePrevScene}
         onMouseEnter={() => handleArrowHover(leftArrowRef, true)}
         onMouseLeave={() => handleArrowHover(leftArrowRef, false)}
         className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full flex items-center justify-center sm:hidden backdrop-blur-md"
-        aria-label="Previous Room"
+        aria-label="Previous Scene"
         style={{
           backgroundColor: "rgba(245, 240, 235, 0.15)",
           border: "1px solid rgba(245, 240, 235, 0.3)",
@@ -528,14 +503,14 @@ const MainPage = ({
         </svg>
       </button>
 
-      {/* --- Right Arrow (Hidden on SM and up) --- */}
+      {/* Mobile Right Arrow */}
       <button
         ref={rightArrowRef}
-        onClick={handleNextRoom}
+        onClick={handleNextScene}
         onMouseEnter={() => handleArrowHover(rightArrowRef, true)}
         onMouseLeave={() => handleArrowHover(rightArrowRef, false)}
         className="absolute right-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full flex items-center justify-center sm:hidden backdrop-blur-md"
-        aria-label="Next Room"
+        aria-label="Next Scene"
         style={{
           backgroundColor: "rgba(245, 240, 235, 0.15)",
           border: "1px solid rgba(245, 240, 235, 0.3)",
@@ -559,14 +534,12 @@ const MainPage = ({
         className="absolute top-0 left-0 right-0 flex justify-between items-center px-6 md:px-10 py-5"
         style={{ zIndex: 20 }}
       >
-        {/* Logo */}
         <Logo
           ref={logoRef}
           className={"w-32 sm:w-40 md:w-48 lg:w-56 xl:w-44 h-auto"}
           onClick={handleClick}
         />
 
-        {/* Close Button */}
         <button
           ref={closeRef}
           onClick={onClose}
@@ -594,16 +567,18 @@ const MainPage = ({
         </button>
       </header>
 
-      {/* Bottom Controls */}
+      {/* ============================================
+          BOTTOM CONTROLS
+          ============================================ */}
       <div
         className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-6"
         style={{ zIndex: 20 }}
       >
-        <div className="flex items-end justify-between gap-7">
+        <div className="flex items-end justify-between gap-3 sm:gap-7">
           {/* Sound Controls */}
           <div
             ref={soundControlsRef}
-            className="flex items-center gap-3 w-[280px]"
+            className="flex items-center gap-3 sm:w-[280px]"
           >
             <button
               onClick={() => setIsMuted(!isMuted)}
@@ -642,56 +617,86 @@ const MainPage = ({
             </button>
           </div>
 
-          {/* Room Carousel Navigation - Extracted Component */}
-          <RoomCarousel
-            ref={carouselRef}
-            rooms={rooms}
-            activeRoom={activeRoom}
-            onRoomChange={handleRoomChange}
-            colors={colors}
-          />
+          {/* ============================
+              CENTER: Nav + Carousel Stack
+              ============================ */}
+          <div className="hidden sm:flex flex-col items-center gap-2">
+            {/* Room Nav (dropup for categories) */}
+            <RoomNav
+              ref={navRef}
+              categories={categories}
+              activeCategory={activeCategory}
+              activeSubcategory={activeSubcategory}
+              onSelect={handleNavSelect}
+              colors={colors}
+            />
 
-          {/* Mobile Floor Plan Button - Visible only on small screens */}
-          <button
-            ref={mobileFloorPlanRef}
-            onClick={onFloorPlanClick}
-            className="md:hidden flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
-            style={{
-              background: "rgba(125, 102, 88, 0.4)",
-              backdropFilter: "blur(12px)",
-              boxShadow: `
-                0 0 0 1px rgba(245, 240, 235, 0.1),
-                0 4px 15px rgba(0, 0, 0, 0.12),
-                0 10px 25px rgba(0, 0, 0, 0.15)
-              `,
-            }}
-            aria-label="View Floor Plan"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="w-5 h-5"
-              stroke={colors.textPrimary}
-              strokeWidth="1.5"
-            >
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-            <span
-              className="text-xs font-medium whitespace-nowrap"
+            {/* Room Carousel (scenes for selected category) */}
+            <RoomCarousel
+              ref={carouselRef}
+              scenes={currentScenes}
+              activeSceneId={activeSceneId}
+              onSceneSelect={handleSceneSelect}
+              colors={colors}
+            />
+          </div>
+
+          {/* ============================
+              RIGHT (Mobile): Nav + Floor Plan stack
+              ============================ */}
+          <div className="sm:hidden flex flex-col items-end gap-2">
+            {/* Mobile Room Nav (collapsible) */}
+            <MobileRoomNav
+              ref={mobileNavRef}
+              categories={categories}
+              activeCategory={activeCategory}
+              activeSubcategory={activeSubcategory}
+              onSelect={handleNavSelect}
+              colors={colors}
+            />
+
+            {/* Floor Plan Button */}
+            <button
+              ref={mobileFloorPlanRef}
+              onClick={onFloorPlanClick}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 active:scale-95"
               style={{
-                fontFamily: "'Marcellus', serif",
-                color: colors.textPrimary,
-                letterSpacing: "0.05em",
+                background: "rgba(125, 102, 88, 0.4)",
+                backdropFilter: "blur(12px)",
+                boxShadow: `
+                  0 0 0 1px rgba(245, 240, 235, 0.1),
+                  0 4px 15px rgba(0, 0, 0, 0.12),
+                  0 10px 25px rgba(0, 0, 0, 0.15)
+                `,
               }}
+              aria-label="View Floor Plan"
             >
-              Floor Plan
-            </span>
-          </button>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="w-5 h-5"
+                stroke={colors.textPrimary}
+                strokeWidth="1.5"
+              >
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              <span
+                className="text-xs font-medium whitespace-nowrap"
+                style={{
+                  fontFamily: "'Marcellus', serif",
+                  color: colors.textPrimary,
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Floor Plan
+              </span>
+            </button>
+          </div>
 
-          {/* Mini Map with Floor Plan Image - Hidden on mobile */}
+          {/* Mini Map - Hidden on mobile */}
           <div
             ref={miniMapRef}
             onClick={onFloorPlanClick}
@@ -706,14 +711,12 @@ const MainPage = ({
               `,
             }}
           >
-            {/* Floor Plan Image */}
             <img
               src={getFloorPlanImage()}
               alt={`${bhkType.toUpperCase()} Floor Plan`}
               className="w-full h-full object-cover p-2 rounded-2xl opacity-90 transition-opacity duration-300 group-hover:opacity-70"
             />
 
-            {/* Hover overlay with text */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 z-10 flex items-center justify-center pointer-events-none">
               <span
                 className="opacity-0 group-hover:opacity-100 text-sm font-medium transition-all duration-300 px-4 py-2 rounded-full transform scale-90 group-hover:scale-100"
@@ -740,15 +743,14 @@ const MainPage = ({
                   0 0 16px ${colors.textAccent}80,
                   0 0 24px ${colors.textAccent}40
                 `,
-                left: (roomHighlights[activeRoom]?.x || 50) + "%",
-                top: (roomHighlights[activeRoom]?.y || 50) + "%",
+                left: currentHighlight.x + "%",
+                top: currentHighlight.y + "%",
                 transform: "translate(-50%, -50%)",
                 transition:
                   "left 0.5s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                 zIndex: 20,
               }}
             >
-              {/* Pulse animation ring */}
               <div
                 className="absolute inset-0 rounded-full animate-ping"
                 style={{

@@ -1,12 +1,28 @@
-import React, { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { gsap } from "/gsap.config.js";
 
+/**
+ * RoomCarousel — Horizontal scrollable carousel of panorama scene thumbnails.
+ *
+ * Props:
+ *   scenes        — array of scene objects from panoConfig (with id, label, preview, etc.)
+ *   activeSceneId — currently active scene ID
+ *   onSceneSelect — (sceneId) => void
+ *   colors        — theme colors object
+ */
 const RoomCarousel = forwardRef(
   (
     {
-      rooms = [],
-      activeRoom,
-      onRoomChange,
+      scenes = [],
+      activeSceneId,
+      onSceneSelect,
       colors = {},
       style = {},
       className = "",
@@ -19,16 +35,19 @@ const RoomCarousel = forwardRef(
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
 
+    // Image loading states
+    const [loadedImages, setLoadedImages] = useState(new Set());
+
     // Mouse drag state refs
     const isDraggingRef = useRef(false);
     const isDownRef = useRef(false);
     const startXRef = useRef(0);
     const scrollLeftRef = useRef(0);
 
-    // Reset refs array when rooms change
+    // Reset refs when scenes change
     useEffect(() => {
       navItemsRef.current = [];
-    }, [rooms]);
+    }, [scenes]);
 
     // Expose container ref and item refs to parent for entrance animations
     useImperativeHandle(ref, () => ({
@@ -41,6 +60,81 @@ const RoomCarousel = forwardRef(
         navItemsRef.current.push(el);
       }
     }, []);
+
+    // Preload preview images when scenes change
+    useEffect(() => {
+      if (!scenes.length) return;
+
+      const newLoaded = new Set();
+      let cancelled = false;
+
+      scenes.forEach((scene) => {
+        const img = new Image();
+        img.onload = () => {
+          if (cancelled) return;
+          newLoaded.add(scene.id);
+          setLoadedImages((prev) => new Set([...prev, scene.id]));
+        };
+        img.onerror = () => {
+          if (cancelled) return;
+          newLoaded.add(scene.id);
+          setLoadedImages((prev) => new Set([...prev, scene.id]));
+        };
+        img.src = scene.preview;
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }, [scenes]);
+
+    // Animate new scenes in when they change
+    useEffect(() => {
+      if (!navItemsRef.current.length) return;
+
+      gsap.fromTo(
+        navItemsRef.current,
+        { opacity: 0, y: 10, scale: 0.95 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.3,
+          stagger: 0.05,
+          ease: "power2.out",
+        }
+      );
+    }, [scenes]);
+
+    // Scroll the active scene into view
+    useEffect(() => {
+      if (!scrollRef.current || !activeSceneId) return;
+      const index = scenes.findIndex((s) => s.id === activeSceneId);
+      if (index < 0) return;
+
+      const item = navItemsRef.current[index];
+      if (!item) return;
+
+      const scrollEl = scrollRef.current;
+      const itemRect = item.getBoundingClientRect();
+      const scrollRect = scrollEl.getBoundingClientRect();
+
+      if (
+        itemRect.left < scrollRect.left ||
+        itemRect.right > scrollRect.right
+      ) {
+        const targetScroll =
+          item.offsetLeft -
+          scrollEl.offsetWidth / 2 +
+          item.offsetWidth / 2;
+
+        gsap.to(scrollEl, {
+          scrollLeft: targetScroll,
+          duration: 0.4,
+          ease: "power2.out",
+        });
+      }
+    }, [activeSceneId, scenes]);
 
     // Check scroll boundaries
     const updateArrows = useCallback(() => {
@@ -62,76 +156,66 @@ const RoomCarousel = forwardRef(
         el.removeEventListener("scroll", updateArrows);
         ro.disconnect();
       };
-    }, [rooms, updateArrows]);
+    }, [scenes, updateArrows]);
 
-    // --- Arrow Click Navigation ---
+    // Arrow scroll
     const handleArrowClick = useCallback((direction) => {
       const el = scrollRef.current;
       if (!el) return;
       const scrollAmount = 240;
       gsap.to(el, {
-        scrollLeft: el.scrollLeft + (direction === "left" ? -scrollAmount : scrollAmount),
+        scrollLeft:
+          el.scrollLeft +
+          (direction === "left" ? -scrollAmount : scrollAmount),
         duration: 0.4,
         ease: "power2.out",
       });
     }, []);
 
-    // --- Mouse Drag Navigation ---
+    // --- Mouse Drag ---
     const handleMouseDown = useCallback((e) => {
       const el = scrollRef.current;
       if (!el) return;
-      
       isDownRef.current = true;
-      isDraggingRef.current = false; // Reset drag status on fresh click
-      
-      // Calculate starting positions
+      isDraggingRef.current = false;
       startXRef.current = e.pageX - el.offsetLeft;
       scrollLeftRef.current = el.scrollLeft;
-      
-      // Add visual cues for dragging
       el.classList.add("dragging");
     }, []);
 
     const handleMouseLeave = useCallback(() => {
       isDownRef.current = false;
-      const el = scrollRef.current;
-      if (el) el.classList.remove("dragging");
+      scrollRef.current?.classList.remove("dragging");
     }, []);
 
     const handleMouseUp = useCallback(() => {
       isDownRef.current = false;
-      const el = scrollRef.current;
-      if (el) el.classList.remove("dragging");
+      scrollRef.current?.classList.remove("dragging");
     }, []);
 
     const handleMouseMove = useCallback((e) => {
       if (!isDownRef.current) return;
-      e.preventDefault(); // Prevent text/image selection while dragging
-      
+      e.preventDefault();
       const el = scrollRef.current;
       if (!el) return;
-
       const x = e.pageX - el.offsetLeft;
-      const walk = (x - startXRef.current) * 1.5; // Multiply by 1.5 for slightly faster panning
-
-      // If user moved the mouse significantly, mark as dragging (so we don't accidentally click a room)
-      if (Math.abs(walk) > 5) {
-        isDraggingRef.current = true;
-      }
-
+      const walk = (x - startXRef.current) * 1.5;
+      if (Math.abs(walk) > 5) isDraggingRef.current = true;
       el.scrollLeft = scrollLeftRef.current - walk;
     }, []);
 
-    // --- Item Interactions ---
-    const handleItemClick = useCallback((e, roomId) => {
-      // If we were dragging, prevent the click from registering as a room change
-      if (isDraggingRef.current) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      onRoomChange(roomId);
-    }, [onRoomChange]);
+    // Item interactions
+    const handleItemClick = useCallback(
+      (e, sceneId) => {
+        if (isDraggingRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        onSceneSelect(sceneId);
+      },
+      [onSceneSelect]
+    );
 
     const handleCarouselItemEnter = useCallback((index) => {
       const item = navItemsRef.current[index];
@@ -159,44 +243,72 @@ const RoomCarousel = forwardRef(
       }
     }, []);
 
+    // Empty state
+    if (!scenes.length) {
+      return (
+        <div
+          ref={containerRef}
+          className={`hidden sm:flex items-center justify-center rounded-2xl px-6 py-4 ${className}`}
+          style={{
+            background: "rgba(125, 102, 88, 0.4)",
+            backdropFilter: "blur(12px)",
+            minHeight: "83px",
+            ...style,
+          }}
+        >
+          <span
+            className="text-xs opacity-50"
+            style={{
+              fontFamily: "'Marcellus', serif",
+              color: colors.textPrimary || "#f5f0eb",
+            }}
+          >
+            Coming soon
+          </span>
+        </div>
+      );
+    }
+
     return (
       <>
-        {/* Carousel-specific styles */}
         <style>{`
           .carousel-scroll-inner {
             perspective: 1000px;
             scrollbar-width: none;
             -ms-overflow-style: none;
-            cursor: grab; /* Add grab cursor */
-            user-select: none; /* Prevent selection while dragging */
+            cursor: grab;
+            user-select: none;
           }
-          
           .carousel-scroll-inner.dragging {
-            cursor: grabbing; /* Change cursor while actively dragging */
+            cursor: grabbing;
           }
-          
           .carousel-scroll-inner::-webkit-scrollbar {
             display: none;
           }
-
           .carousel-item {
             transform-style: preserve-3d;
-            opacity: 0;
-            transform: translateY(15px) scale(0.95);
-            /* Prevent image dragging overriding our custom drag */
-            -webkit-user-drag: none; 
+            -webkit-user-drag: none;
           }
-
-          .carousel-item:hover {
-            transform: translateY(-4px) rotateX(3deg) !important;
-          }
-
           .carousel-arrow-btn {
             transition: opacity 0.25s ease, transform 0.15s ease, background 0.15s ease;
           }
           .carousel-arrow-btn:hover {
             background: rgba(255, 255, 255, 0.95) !important;
             transform: translateY(-50%) scale(1.12) !important;
+          }
+          .carousel-preview-skeleton {
+            background: linear-gradient(
+              90deg,
+              rgba(245, 240, 235, 0.05) 25%,
+              rgba(245, 240, 235, 0.1) 50%,
+              rgba(245, 240, 235, 0.05) 75%
+            );
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s ease-in-out infinite;
+          }
+          @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
           }
         `}</style>
 
@@ -229,9 +341,14 @@ const RoomCarousel = forwardRef(
             }}
           >
             <svg
-              width="12" height="12" viewBox="0 0 24 24" fill="none"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
               stroke={colors.terracottaDark || "#6b4c3b"}
-              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
               <polyline points="15 18 9 12 15 6" />
             </svg>
@@ -246,50 +363,59 @@ const RoomCarousel = forwardRef(
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
           >
-            {rooms.map((room, index) => (
-              <div
-                key={room.id}
-                ref={addToNavItems}
-                onClick={(e) => handleItemClick(e, room.id)}
-                onMouseEnter={() => handleCarouselItemEnter(index)}
-                onMouseLeave={() => handleCarouselItemLeave(index)}
-                className="carousel-item flex-shrink-0 cursor-pointer rounded-xl overflow-hidden relative"
-                style={{
-                  width: "110px",
-                  height: "75px",
-                  boxShadow:
-                    activeRoom === room.id
-                      ? `0 6px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px ${colors.textAccent}`
-                      : "0 4px 15px rgba(0, 0, 0, 0.15)",
-                  transformStyle: "preserve-3d",
-                  transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                }}
-              >
-                {/* Background Image */}
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500"
-                  style={{
-                    backgroundImage: `url(${room.image})`,
-                    transform:
-                      activeRoom === room.id ? "scale(1.15)" : "scale(1)",
-                  }}
-                />
+            {scenes.map((scene, index) => {
+              const isActive = activeSceneId === scene.id;
+              const isImageLoaded = loadedImages.has(scene.id);
 
-                {/* Overlay */}
+              return (
                 <div
-                  className="absolute inset-0 transition-all duration-300"
+                  key={scene.id}
+                  ref={addToNavItems}
+                  onClick={(e) => handleItemClick(e, scene.id)}
+                  onMouseEnter={() => handleCarouselItemEnter(index)}
+                  onMouseLeave={() => handleCarouselItemLeave(index)}
+                  className="carousel-item flex-shrink-0 cursor-pointer rounded-xl overflow-hidden relative"
                   style={{
-                    background:
-                      activeRoom === room.id
+                    width: "110px",
+                    height: "75px",
+                    boxShadow: isActive
+                      ? `0 6px 20px rgba(0, 0, 0, 0.3), 0 0 0 2px ${colors.textAccent || "#E8C4A0"}`
+                      : "0 4px 15px rgba(0, 0, 0, 0.15)",
+                    transformStyle: "preserve-3d",
+                    transition:
+                      "transform 0.3s ease, box-shadow 0.3s ease",
+                  }}
+                >
+                  {/* Skeleton loader */}
+                  {!isImageLoaded && (
+                    <div className="absolute inset-0 carousel-preview-skeleton rounded-xl" />
+                  )}
+
+                  {/* Background Image */}
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+                    style={{
+                      backgroundImage: `url(${scene.preview})`,
+                      transform: isActive ? "scale(1.15)" : "scale(1)",
+                      opacity: isImageLoaded ? 1 : 0,
+                      transition:
+                        "transform 0.5s ease, opacity 0.3s ease",
+                    }}
+                  />
+
+                  {/* Overlay */}
+                  <div
+                    className="absolute inset-0 transition-all duration-300"
+                    style={{
+                      background: isActive
                         ? "linear-gradient(to top, rgba(245, 240, 235, 0.9) 0%, transparent 100%)"
                         : "linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%)",
-                  }}
-                />
+                    }}
+                  />
 
-                {/* Content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-end p-2 pointer-events-none">
-                  {/* 360 indicator */}
-                  {room.is360 && (
+                  {/* Content */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-end p-2 pointer-events-none">
+                    {/* 360 indicator */}
                     <div
                       className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
                       style={{
@@ -301,33 +427,32 @@ const RoomCarousel = forwardRef(
                         viewBox="0 0 24 24"
                         fill="none"
                         className="w-3 h-3"
-                        stroke={colors.terracotta}
+                        stroke={colors.terracotta || "#c17f59"}
                         strokeWidth="2"
                       >
                         <circle cx="12" cy="12" r="10" />
                         <path d="M2 12h20" />
                       </svg>
                     </div>
-                  )}
-                  <span
-                    className="text-[10px] md:text-[11px] font-medium text-center leading-tight"
-                    style={{
-                      fontFamily: "'Marcellus', serif",
-                      textShadow:
-                        activeRoom === room.id
+
+                    <span
+                      className="text-[10px] md:text-[11px] font-medium text-center leading-tight"
+                      style={{
+                        fontFamily: "'Marcellus', serif",
+                        textShadow: isActive
                           ? "none"
                           : "0 1px 3px rgba(0,0,0,0.4)",
-                      color:
-                        activeRoom === room.id
-                          ? colors.terracottaDark
-                          : colors.textPrimary,
-                    }}
-                  >
-                    {room.id}
-                  </span>
+                        color: isActive
+                          ? colors.terracottaDark || "#a65d3f"
+                          : colors.textPrimary || "#f5f0eb",
+                      }}
+                    >
+                      {scene.label}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Right Arrow */}
@@ -345,9 +470,14 @@ const RoomCarousel = forwardRef(
             }}
           >
             <svg
-              width="12" height="12" viewBox="0 0 24 24" fill="none"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
               stroke={colors.terracottaDark || "#6b4c3b"}
-              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
               <polyline points="9 6 15 12 9 18" />
             </svg>
