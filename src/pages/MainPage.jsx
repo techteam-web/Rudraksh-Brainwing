@@ -4,12 +4,11 @@ import PanoramaViewer from "../components/PanoramaViewer";
 import Logo from "../components/Logo";
 import RoomNav from "../components/RoomNav";
 import MobileRoomNav from "../components/MobileRoomNav";
-import RoomCarousel from "../components/RoomCarousel";
 import { useNavigate } from "react-router-dom";
 import {
   getCategories,
-  getScenes,
   getDefaultScene,
+  getCategoryDefaultScene,
   findSceneById,
   preloadImages,
   getPreviewUrls,
@@ -29,33 +28,28 @@ const MainPage = ({
   const overlayRef = useRef(null);
   const miniMapRef = useRef(null);
   const soundControlsRef = useRef(null);
-  const vignetteRef = useRef(null);
   const animationStartedRef = useRef(false);
   const navigate = useNavigate();
 
   // Component refs
   const navRef = useRef(null);
   const mobileNavRef = useRef(null);
-  const carouselRef = useRef(null);
 
-  // --- Refs for Mobile Arrows ---
-  const leftArrowRef = useRef(null);
-  const rightArrowRef = useRef(null);
+  // Transition overlay
+  const transitionOverlayRef = useRef(null);
 
-  // --- Ref for Mobile Floor Plan Button ---
+  // Mobile Floor Plan Button
   const mobileFloorPlanRef = useRef(null);
 
-  // --- State ---
+  // State
   const [isMuted, setIsMuted] = useState(false);
+  const isTransitioningRef = useRef(false);
 
-  // Navigation state: which category, subcategory, and scene are active
+  // Navigation state
   const [activeCategory, setActiveCategory] = useState(null);
   const [activeSubcategory, setActiveSubcategory] = useState(null);
   const [activeSceneId, setActiveSceneId] = useState(null);
   const [activeSceneConfig, setActiveSceneConfig] = useState(null);
-
-  // Derived: current scenes for the carousel
-  const [currentScenes, setCurrentScenes] = useState([]);
 
   // Categories from config
   const categories = getCategories(bhkType);
@@ -75,22 +69,11 @@ const MainPage = ({
     terracottaLight: "#d4a574",
   };
 
-  // Get floor plan image path
   const getFloorPlanImage = useCallback(() => {
     return bhkType === "3bhk"
       ? "/assets/3bhk/floorplan/3BHK PLAN Main.webp"
       : "/assets/4bhk/floorplan/4BHK PLAN Main.webp";
   }, [bhkType]);
-
-  // Room highlights for minimap (you can adjust per scene if needed)
-  const roomHighlights = {
-    living: { x: 44, y: 35 },
-    kitchen: { x: 51, y: 67 },
-    "master-bedroom": { x: 60, y: 23 },
-    "bedroom-1": { x: 84, y: 24 },
-    "bedroom-2": { x: 84, y: 48 },
-    "bedroom-3": { x: 84, y: 68 },
-  };
 
   // --- Initialize default scene on mount ---
   useEffect(() => {
@@ -100,161 +83,130 @@ const MainPage = ({
       setActiveSubcategory(defaultScene.subcategoryId);
       setActiveSceneId(defaultScene.scene.id);
       setActiveSceneConfig(defaultScene.scene);
-
-      const scenes = getScenes(
-        bhkType,
-        defaultScene.categoryId,
-        defaultScene.subcategoryId
-      );
-      setCurrentScenes(scenes);
     }
   }, [bhkType]);
+
+  // ─────────────────────────────────────────────
+  //  GSAP zoom-in + fade transition
+  //  Only animates transform (scale) and opacity
+  //  for guaranteed 60fps compositing.
+  // ─────────────────────────────────────────────
+  const transitionToScene = useCallback(
+    (newScene, categoryId, subcategoryId) => {
+      if (isTransitioningRef.current) return;
+      isTransitioningRef.current = true;
+
+      const panoLayer = imageRef.current;
+      const overlay = transitionOverlayRef.current;
+
+      // Kill any in-progress tweens on these elements
+      gsap.killTweensOf(panoLayer);
+      gsap.killTweensOf(overlay);
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          isTransitioningRef.current = false;
+        },
+      });
+
+      // Phase 1 — zoom in + fade out current scene
+      tl.to(panoLayer, {
+        scale: 1.12,
+        opacity: 0,
+        duration: 0.4,
+        ease: "power3.in",
+      });
+
+      // Dark overlay rises alongside
+      tl.to(
+        overlay,
+        {
+          opacity: 1,
+          duration: 0.35,
+          ease: "power2.in",
+        },
+        0 // start at same time as zoom
+      );
+
+      // Phase 2 — swap scene while hidden
+      tl.call(() => {
+        setActiveCategory(categoryId);
+        setActiveSubcategory(subcategoryId);
+        setActiveSceneId(newScene.id);
+        setActiveSceneConfig(newScene);
+      });
+
+      // Tiny pause for React to mount the new PanoramaViewer
+      tl.to({}, { duration: 0.15 });
+
+      // Phase 3 — reset scale to slightly zoomed, then reveal
+      tl.set(panoLayer, { scale: 1.06 });
+
+      tl.to(panoLayer, {
+        scale: 1,
+        opacity: 1,
+        duration: 0.5,
+        ease: "power2.out",
+      });
+
+      tl.to(
+        overlay,
+        {
+          opacity: 0,
+          duration: 0.4,
+          ease: "power2.out",
+        },
+        "<" // same start as the reveal
+      );
+    },
+    []
+  );
 
   // --- Handle nav category/subcategory selection ---
   const handleNavSelect = useCallback(
     (categoryId, subcategoryId) => {
-      setActiveCategory(categoryId);
-      setActiveSubcategory(subcategoryId);
+      if (
+        categoryId === activeCategory &&
+        subcategoryId === activeSubcategory
+      )
+        return;
 
-      const scenes = getScenes(bhkType, categoryId, subcategoryId);
-      setCurrentScenes(scenes);
-
-      // Auto-select first scene in the new category
-      if (scenes.length > 0) {
-        setActiveSceneId(scenes[0].id);
-        setActiveSceneConfig(scenes[0]);
-      } else {
-        setActiveSceneId(null);
-        setActiveSceneConfig(null);
-      }
-
-      // Preload all preview images for this category
-      const urls = getPreviewUrls(bhkType, categoryId, subcategoryId);
-      preloadImages(urls);
-    },
-    [bhkType]
-  );
-
-  // --- Handle scene selection from carousel ---
-  const handleSceneSelect = useCallback(
-    (sceneId) => {
-      if (sceneId === activeSceneId) return;
-
-      const scene = currentScenes.find((s) => s.id === sceneId);
-      if (!scene) return;
-
-      // Crossfade animation
-      if (imageRef.current) {
-        gsap
-          .timeline()
-          .to(imageRef.current, {
-            opacity: 0.3,
-            scale: 1.02,
-            duration: 0.25,
-            ease: "power2.in",
-          })
-          .call(() => {
-            setActiveSceneId(sceneId);
-            setActiveSceneConfig(scene);
-          })
-          .to(imageRef.current, {
-            opacity: 1,
-            scale: 1,
-            duration: 0.35,
-            ease: "power2.out",
-          });
-      } else {
-        setActiveSceneId(sceneId);
-        setActiveSceneConfig(scene);
-      }
-
-      // Update minimap dot
-      const catId = activeSubcategory || activeCategory;
-      const highlight = roomHighlights[catId];
-      if (highlight && containerRef.current) {
-        const dot = containerRef.current.querySelector(".minimap-highlight");
-        if (dot) {
-          gsap.to(dot, {
-            left: highlight.x + "%",
-            top: highlight.y + "%",
-            duration: 0.5,
-            ease: "power2.inOut",
-          });
-        }
-      }
-    },
-    [activeSceneId, currentScenes, activeCategory, activeSubcategory]
-  );
-
-  // --- Handle hotspot click (navigate to target scene) ---
-  const handleHotspotClick = useCallback(
-    (targetSceneId) => {
-      const result = findSceneById(bhkType, targetSceneId);
+      const result = getCategoryDefaultScene(
+        bhkType,
+        categoryId,
+        subcategoryId
+      );
       if (!result) return;
 
-      const { scene, categoryId, subcategoryId } = result;
+      const { scene, subcategoryId: resolvedSubId } = result;
 
-      // Update nav state
-      setActiveCategory(categoryId);
-      setActiveSubcategory(subcategoryId);
+      // Preload previews
+      const urls = getPreviewUrls(bhkType, categoryId, resolvedSubId);
+      preloadImages(urls);
 
-      // Update carousel scenes
-      const scenes = getScenes(bhkType, categoryId, subcategoryId);
-      setCurrentScenes(scenes);
-
-      // Select the target scene
-      setActiveSceneId(scene.id);
-      setActiveSceneConfig(scene);
+      transitionToScene(scene, categoryId, resolvedSubId);
     },
-    [bhkType]
+    [bhkType, activeCategory, activeSubcategory, transitionToScene]
   );
 
-  // --- Mobile arrow navigation ---
-  const handleNextScene = () => {
-    if (!currentScenes.length) return;
-    const idx = currentScenes.findIndex((s) => s.id === activeSceneId);
-    const next = (idx + 1) % currentScenes.length;
-    handleSceneSelect(currentScenes[next].id);
+  // --- Handle hotspot click ---
+  const handleHotspotClick = useCallback(
+    (targetSceneId) => {
+      if (isTransitioningRef.current) return;
 
-    if (rightArrowRef.current) {
-      gsap.fromTo(
-        rightArrowRef.current,
-        { scale: 0.9 },
-        { scale: 1, duration: 0.3, ease: "back.out(3)" }
-      );
-    }
-  };
+      const result = findSceneById(bhkType, targetSceneId);
+      if (!result) {
+        console.warn("Scene not found:", targetSceneId);
+        return;
+      }
 
-  const handlePrevScene = () => {
-    if (!currentScenes.length) return;
-    const idx = currentScenes.findIndex((s) => s.id === activeSceneId);
-    const prev = (idx - 1 + currentScenes.length) % currentScenes.length;
-    handleSceneSelect(currentScenes[prev].id);
+      const { scene, categoryId, subcategoryId } = result;
+      transitionToScene(scene, categoryId, subcategoryId);
+    },
+    [bhkType, transitionToScene]
+  );
 
-    if (leftArrowRef.current) {
-      gsap.fromTo(
-        leftArrowRef.current,
-        { scale: 0.9 },
-        { scale: 1, duration: 0.3, ease: "back.out(3)" }
-      );
-    }
-  };
-
-  const handleArrowHover = (ref, isEnter) => {
-    if (ref.current) {
-      gsap.to(ref.current, {
-        scale: isEnter ? 1.15 : 1,
-        backgroundColor: isEnter
-          ? "rgba(245, 240, 235, 0.3)"
-          : "rgba(245, 240, 235, 0.15)",
-        boxShadow: isEnter ? "0 0 15px rgba(232, 196, 160, 0.4)" : "none",
-        duration: 0.3,
-        ease: "power2.out",
-      });
-    }
-  };
-
-  // --- Set initial hidden states on mount ---
+  // --- Set initial hidden states ---
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -262,31 +214,23 @@ const MainPage = ({
     gsap.set(closeRef.current, { opacity: 0, x: 20 });
     gsap.set(imageRef.current, { opacity: 0 });
     gsap.set(overlayRef.current, { opacity: 0 });
-    if (vignetteRef.current) gsap.set(vignetteRef.current, { opacity: 0 });
     gsap.set(miniMapRef.current, { opacity: 0, scale: 0.95 });
     gsap.set(soundControlsRef.current, { opacity: 0 });
-    gsap.set(leftArrowRef.current, { opacity: 0 });
-    gsap.set(rightArrowRef.current, { opacity: 0 });
     gsap.set(mobileFloorPlanRef.current, { opacity: 0, scale: 0.95 });
+    if (transitionOverlayRef.current)
+      gsap.set(transitionOverlayRef.current, { opacity: 0 });
 
-    // Mobile nav
     const mobileNavEl = mobileNavRef.current?.getContainerEl();
     if (mobileNavEl) gsap.set(mobileNavEl, { opacity: 0, scale: 0.95 });
 
-    // Nav container
     const navEl = navRef.current?.getContainerEl();
     if (navEl) gsap.set(navEl, { opacity: 0, y: 10 });
-
-    // Carousel container
-    const carouselEl = carouselRef.current?.getContainerEl();
-    if (carouselEl) gsap.set(carouselEl, { opacity: 0, y: 15 });
   }, []);
 
   // --- Entrance animation ---
   useEffect(() => {
     if (!isReady || animationStartedRef.current || !containerRef.current)
       return;
-
     animationStartedRef.current = true;
 
     const tl = gsap.timeline({
@@ -294,7 +238,7 @@ const MainPage = ({
       delay: 0.05,
     });
 
-    tl.to(imageRef.current, { opacity: 1, duration: 0.4, ease: "power2.out" });
+    tl.to(imageRef.current, { opacity: 1, duration: 0.4 });
     tl.to(overlayRef.current, { opacity: 1, duration: 0.3 }, "-=0.2");
 
     tl.add(
@@ -303,20 +247,10 @@ const MainPage = ({
     );
     tl.to(closeRef.current, { opacity: 1, x: 0, duration: 0.3 }, "-=0.2");
 
-    // Nav
     const navEl = navRef.current?.getContainerEl();
     if (navEl) {
       tl.to(navEl, { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
     }
-
-    // Carousel
-    const carouselEl = carouselRef.current?.getContainerEl();
-    if (carouselEl) {
-      tl.to(carouselEl, { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
-    }
-
-    tl.to(leftArrowRef.current, { opacity: 1, duration: 0.2 }, "-=0.1");
-    tl.to(rightArrowRef.current, { opacity: 1, duration: 0.2 }, "-=0.2");
 
     tl.to(
       miniMapRef.current,
@@ -330,14 +264,13 @@ const MainPage = ({
       "-=0.1"
     );
 
-    // Mobile nav
     const mobileNavEl = mobileNavRef.current?.getContainerEl();
     if (mobileNavEl) {
       tl.to(mobileNavEl, { opacity: 1, scale: 1, duration: 0.2 }, "-=0.15");
     }
   }, [isReady]);
 
-  // Close button handlers
+  // Close button hover
   const handleCloseEnter = () => {
     if (closeRef.current) {
       gsap.to(closeRef.current, {
@@ -349,7 +282,6 @@ const MainPage = ({
       });
     }
   };
-
   const handleCloseLeave = () => {
     if (closeRef.current) {
       gsap.to(closeRef.current, {
@@ -362,12 +294,9 @@ const MainPage = ({
     }
   };
 
-  // Current minimap highlight
-  const currentHighlightKey = activeSubcategory || activeCategory;
-  const currentHighlight = roomHighlights[currentHighlightKey] || {
-    x: 50,
-    y: 50,
-  };
+  // Minimap dot position
+  // Minimap dot reads position from the active scene's minimapPos
+  const currentHighlight = activeSceneConfig?.minimapPos || { x: 50, y: 50 };
 
   return (
     <div
@@ -380,10 +309,12 @@ const MainPage = ({
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Marcellus&display=swap');
       `}</style>
 
-      {/* ============================================
-          LAYER 1: Panorama Background (z-index: 1)
-          ============================================ */}
-      <div ref={imageRef} className="absolute inset-0" style={{ zIndex: 1 }}>
+      {/* ── LAYER 1: Panorama ── */}
+      <div
+        ref={imageRef}
+        className="absolute inset-0"
+        style={{ zIndex: 1, willChange: "transform, opacity" }}
+      >
         {activeSceneConfig ? (
           <PanoramaViewer
             key={activeSceneConfig.id}
@@ -402,18 +333,25 @@ const MainPage = ({
         )}
       </div>
 
-      {/* ============================================
-          LAYER 2: Overlay (z-index: 2)
-          ============================================ */}
+      {/* ── LAYER 2: Transition Overlay ── */}
+      <div
+        ref={transitionOverlayRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          zIndex: 4,
+          backgroundColor: "#1a1814",
+          opacity: 0,
+        }}
+      />
+
+      {/* ── LAYER 3: Decorative overlay ── */}
       <div
         ref={overlayRef}
         className="absolute inset-0 pointer-events-none"
         style={{ zIndex: 2 }}
       />
 
-      {/* ============================================
-          LAYER 9: Top Navbar Gradient (z-index: 9)
-          ============================================ */}
+      {/* ── LAYER 9: Top gradient ── */}
       <div
         className="absolute top-0 left-0 right-0 pointer-events-none"
         style={{
@@ -438,11 +376,7 @@ const MainPage = ({
         }}
       />
 
-      {/* ============================================
-          LAYER 10+: ALL UI ELEMENTS
-          ============================================ */}
-
-      {/* 360 Indicator */}
+      {/* ── 360° indicator ── */}
       {activeSceneConfig && (
         <div
           className="absolute top-10 left-1/2 transform -translate-x-1/2 items-center gap-2 px-2 py-1 rounded-full hidden md:flex"
@@ -477,59 +411,7 @@ const MainPage = ({
         </div>
       )}
 
-      {/* Mobile Left Arrow */}
-      <button
-        ref={leftArrowRef}
-        onClick={handlePrevScene}
-        onMouseEnter={() => handleArrowHover(leftArrowRef, true)}
-        onMouseLeave={() => handleArrowHover(leftArrowRef, false)}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full flex items-center justify-center sm:hidden backdrop-blur-md"
-        aria-label="Previous Scene"
-        style={{
-          backgroundColor: "rgba(245, 240, 235, 0.15)",
-          border: "1px solid rgba(245, 240, 235, 0.3)",
-        }}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-6 h-6"
-          style={{ stroke: colors.textPrimary }}
-        >
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
-      </button>
-
-      {/* Mobile Right Arrow */}
-      <button
-        ref={rightArrowRef}
-        onClick={handleNextScene}
-        onMouseEnter={() => handleArrowHover(rightArrowRef, true)}
-        onMouseLeave={() => handleArrowHover(rightArrowRef, false)}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full flex items-center justify-center sm:hidden backdrop-blur-md"
-        aria-label="Next Scene"
-        style={{
-          backgroundColor: "rgba(245, 240, 235, 0.15)",
-          border: "1px solid rgba(245, 240, 235, 0.3)",
-        }}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-6 h-6"
-          style={{ stroke: colors.textPrimary }}
-        >
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-      </button>
-
-      {/* Header */}
+      {/* ── Header ── */}
       <header
         className="absolute top-0 left-0 right-0 flex justify-between items-center px-6 md:px-10 py-5"
         style={{ zIndex: 20 }}
@@ -567,15 +449,13 @@ const MainPage = ({
         </button>
       </header>
 
-      {/* ============================================
-          BOTTOM CONTROLS
-          ============================================ */}
+      {/* ── Bottom Controls ── */}
       <div
         className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-6"
         style={{ zIndex: 20 }}
       >
         <div className="flex items-end justify-between gap-3 sm:gap-7">
-          {/* Sound Controls */}
+          {/* Sound */}
           <div
             ref={soundControlsRef}
             className="flex items-center gap-3 sm:w-[280px]"
@@ -617,11 +497,8 @@ const MainPage = ({
             </button>
           </div>
 
-          {/* ============================
-              CENTER: Nav + Carousel Stack
-              ============================ */}
+          {/* Center: Nav (desktop) */}
           <div className="hidden sm:flex flex-col items-center gap-2">
-            {/* Room Nav (dropup for categories) */}
             <RoomNav
               ref={navRef}
               categories={categories}
@@ -630,22 +507,10 @@ const MainPage = ({
               onSelect={handleNavSelect}
               colors={colors}
             />
-
-            {/* Room Carousel (scenes for selected category) */}
-            <RoomCarousel
-              ref={carouselRef}
-              scenes={currentScenes}
-              activeSceneId={activeSceneId}
-              onSceneSelect={handleSceneSelect}
-              colors={colors}
-            />
           </div>
 
-          {/* ============================
-              RIGHT (Mobile): Nav + Floor Plan stack
-              ============================ */}
+          {/* Right (Mobile): Nav + Floor Plan */}
           <div className="sm:hidden flex flex-col items-end gap-2">
-            {/* Mobile Room Nav (collapsible) */}
             <MobileRoomNav
               ref={mobileNavRef}
               categories={categories}
@@ -655,7 +520,6 @@ const MainPage = ({
               colors={colors}
             />
 
-            {/* Floor Plan Button */}
             <button
               ref={mobileFloorPlanRef}
               onClick={onFloorPlanClick}
@@ -696,7 +560,7 @@ const MainPage = ({
             </button>
           </div>
 
-          {/* Mini Map - Hidden on mobile */}
+          {/* Mini Map (desktop) */}
           <div
             ref={miniMapRef}
             onClick={onFloorPlanClick}
@@ -764,7 +628,7 @@ const MainPage = ({
         </div>
       </div>
 
-      {/* Bottom decorative line */}
+      {/* Bottom line */}
       <div
         className="absolute bottom-0 left-0 right-0 pointer-events-none"
         style={{ zIndex: 15 }}

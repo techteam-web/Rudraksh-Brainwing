@@ -1,8 +1,13 @@
 import React, { useRef, useState, useCallback } from "react";
 import { gsap, useGSAP } from "/gsap.config.js";
 import Logo from "../components/Logo";
-import RoomCarousel from "../components/RoomCarousel";
+import RoomNav from "../components/RoomNav";
+import MobileRoomNav from "../components/MobileRoomNav";
 import { useNavigate } from "react-router-dom";
+import {
+  getCategories,
+  getCategoryDefaultScene,
+} from "../data/panoConfig";
 
 const FloorPlanPage = ({
   onClose,
@@ -11,13 +16,19 @@ const FloorPlanPage = ({
   initialRoom = null,
 }) => {
   const containerRef = useRef(null);
-  const [activeRoom, setActiveRoom] = useState(initialRoom || "Living");
   const [isMuted, setIsMuted] = useState(false);
   const logoRef = useRef(null);
   const logoContainerRef = useRef(null);
   const closeRef = useRef(null);
-  const carouselRef = useRef(null);
+  const navRef = useRef(null);
+  const mobileNavRef = useRef(null);
   const navigate = useNavigate();
+
+  // Nav state — tracks which category pill is highlighted
+  const [activeCategory, setActiveCategory] = useState("living");
+  const [activeSubcategory, setActiveSubcategory] = useState(null);
+
+  const categories = getCategories(bhkType);
 
   const handleClick = () => {
     navigate("/");
@@ -34,31 +45,32 @@ const FloorPlanPage = ({
     terracottaLight: "#d4a574",
   };
 
-  // Room data with dynamic paths based on bhkType
-  const basePath = `/assets/${bhkType}/rooms/preview`;
-
-  const rooms =
-    bhkType === "4bhk"
-      ? [
-          { id: "Arrival", name: "Arrival Space", description: "Grand entrance foyer", x: 18, y: 25, image: `${basePath}/arrival.webp` },
-          { id: "Living", name: "Family Lounge", description: "Spacious living area", x: 45, y: 25, image: `${basePath}/livingroom.webp` },
-          { id: "Kitchen", name: "Heart of the Home", description: "Modern culinary space", x: 45, y: 65, image: `${basePath}/kitchen.webp` },
-          { id: "Bedroom", name: "Private Retreat", description: "Master bedroom suite", x: 72, y: 25, image: `${basePath}/bedroom.webp` },
-          { id: "Balcony", name: "Open-Air Escape", description: "Scenic outdoor space", x: 18, y: 65, image: `${basePath}/balcony.webp` },
-          { id: "Kids Bedroom 1", name: "Kids Room 1", description: "Playful kids space", x: 88, y: 25, image: `${basePath}/kids-bedroom-1.webp`, is360: true },
-          { id: "Kids Bedroom 2", name: "Kids Room 2", description: "Cozy kids retreat", x: 88, y: 70, image: `${basePath}/kids-bedroom-2.webp`, is360: true },
-        ]
-      : [
-          { id: "Arrival", name: "Arrival Space", description: "Grand entrance foyer", x: 18, y: 25, image: `${basePath}/arrival.webp` },
-          { id: "Living", name: "Family Lounge", description: "Spacious living area", x: 45, y: 25, image: `${basePath}/livingroom.webp` },
-          { id: "Kitchen", name: "Heart of the Home", description: "Modern culinary space", x: 45, y: 65, image: `${basePath}/kitchen.webp` },
-          { id: "Bedroom", name: "Private Retreat", description: "Master bedroom suite", x: 72, y: 25, image: `${basePath}/bedroom.webp` },
-          { id: "Balcony", name: "Open-Air Escape", description: "Scenic outdoor space", x: 18, y: 65, image: `${basePath}/balcony.webp` },
-          { id: "Kids Bedroom", name: "Kids Room", description: "Playful kids space", x: 88, y: 45, image: `${basePath}/kids-bedroom.webp`, is360: true },
-        ];
-
   // Floorplan image path
   const floorplanImage = `/assets/${bhkType}/floorplan/${bhkType.toUpperCase()} PLAN.jpg`;
+
+  // --- Nav select → navigate to walkthrough with that category ---
+  const handleNavSelect = useCallback(
+    (categoryId, subcategoryId) => {
+      setActiveCategory(categoryId);
+      setActiveSubcategory(subcategoryId);
+
+      // Resolve the default scene for this category
+      const result = getCategoryDefaultScene(bhkType, categoryId, subcategoryId);
+      if (!result) return;
+
+      const { scene, categoryId: resolvedCat, subcategoryId: resolvedSub } = result;
+
+      // Navigate to walkthrough with the selected category + scene
+      if (onRoomSelect) {
+        onRoomSelect({
+          categoryId: resolvedCat,
+          subcategoryId: resolvedSub,
+          sceneId: scene.id,
+        });
+      }
+    },
+    [bhkType, onRoomSelect]
+  );
 
   // Entry animations
   useGSAP(
@@ -70,10 +82,12 @@ const FloorPlanPage = ({
         gsap.set(".sound-controls", { opacity: 0, x: -20 });
         gsap.set(".particle", { opacity: 0 });
 
-        const carouselEl = carouselRef.current?.getContainerEl();
-        if (carouselEl) {
-          gsap.set(carouselEl, { opacity: 0, y: 20 });
-        }
+        // Nav initial states
+        const navEl = navRef.current?.getContainerEl();
+        if (navEl) gsap.set(navEl, { opacity: 0, y: 10 });
+
+        const mobileNavEl = mobileNavRef.current?.getContainerEl();
+        if (mobileNavEl) gsap.set(mobileNavEl, { opacity: 0, scale: 0.95 });
 
         const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
 
@@ -90,16 +104,15 @@ const FloorPlanPage = ({
           }, 0.35)
           .to(closeRef.current, { opacity: 1, x: 0, duration: 0.5 }, 0.3);
 
-        if (carouselEl) {
-          tl.to(carouselEl, { opacity: 1, y: 0, duration: 0.5 }, 0.4);
+        // Animate nav in
+        if (navEl) {
+          tl.to(navEl, { opacity: 1, y: 0, duration: 0.4 }, 0.4);
+        }
+        if (mobileNavEl) {
+          tl.to(mobileNavEl, { opacity: 1, scale: 1, duration: 0.3 }, 0.4);
         }
 
-        tl.to(
-            ".carousel-item",
-            { opacity: 1, y: 0, stagger: 0.05, duration: 0.4 },
-            0.5
-          )
-          .to(".sound-controls", { opacity: 1, x: 0, duration: 0.4 }, 0.5)
+        tl.to(".sound-controls", { opacity: 1, x: 0, duration: 0.4 }, 0.5)
           .to(".particle", { opacity: 0.3, stagger: 0.1, duration: 0.5 }, 0.6);
 
         gsap.utils.toArray(".particle").forEach((particle, i) => {
@@ -139,13 +152,6 @@ const FloorPlanPage = ({
       ease: "power2.out",
     });
   }, []);
-
-  const handleRoomChange = useCallback(
-    (roomId) => {
-      setActiveRoom(roomId);
-    },
-    []
-  );
 
   return (
     <div
@@ -188,7 +194,7 @@ const FloorPlanPage = ({
         ))}
       </div>
 
-      {/* 1st Stack: Header — flex-none keeps it from shrinking/growing */}
+      {/* Header */}
       <header
         className="flex-none flex justify-between items-center px-6 md:px-10 py-3 sm:py-4 md:py-5"
         style={{ zIndex: 20 }}
@@ -228,12 +234,12 @@ const FloorPlanPage = ({
         </button>
       </header>
 
-      {/* 2nd Stack: Main Content — flex-1 min-h-0 strictly contains it between header & footer */}
+      {/* Main Content */}
       <main
         className="flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 md:px-16"
         style={{ zIndex: 10 }}
       >
-        <div 
+        <div
           className="floor-plan-container w-full h-full max-h-full max-w-5xl flex flex-col justify-center rounded-2xl overflow-hidden p-4 sm:p-6 md:p-8"
           style={{
             background: "rgba(230, 216, 204, 0.2)",
@@ -241,7 +247,7 @@ const FloorPlanPage = ({
             boxShadow: "0 25px 70px rgba(0, 0, 0, 0.15)",
           }}
         >
-          {/* Title Area */}
+          {/* Title */}
           <div className="flex-none text-center mb-3">
             <h2
               className="text-xl sm:text-2xl md:text-3xl font-light"
@@ -255,7 +261,7 @@ const FloorPlanPage = ({
             </h2>
           </div>
 
-          {/* Image Area — dynamically scales without pushing out */}
+          {/* Floor Plan Image */}
           <div className="flex-1 min-h-0 w-full flex items-center justify-center">
             <img
               src={floorplanImage}
@@ -266,7 +272,7 @@ const FloorPlanPage = ({
         </div>
       </main>
 
-      {/* 3rd Stack: Footer — flex-none locks it to the bottom */}
+      {/* Footer */}
       <div
         className="flex-none px-4 md:px-10 pb-4 sm:pb-5 md:pb-6 pt-2"
         style={{ zIndex: 20 }}
@@ -304,17 +310,32 @@ const FloorPlanPage = ({
             </button>
           </div>
 
-          {/* Room Carousel Component */}
-          <RoomCarousel
-            ref={carouselRef}
-            rooms={rooms}
-            activeRoom={activeRoom}
-            onRoomChange={handleRoomChange}
-            colors={colors}
-            className="max-w-[75vw]"
-          />
+          {/* Center: Nav (desktop) */}
+          <div className="hidden sm:flex flex-col items-center gap-2">
+            <RoomNav
+              ref={navRef}
+              categories={categories}
+              activeCategory={activeCategory}
+              activeSubcategory={activeSubcategory}
+              onSelect={handleNavSelect}
+              colors={colors}
+            />
+          </div>
 
-          <div className="w-10" />
+          {/* Right (Mobile): Nav + Carousel stack */}
+          <div className="sm:hidden flex flex-col items-end gap-2">
+            <MobileRoomNav
+              ref={mobileNavRef}
+              categories={categories}
+              activeCategory={activeCategory}
+              activeSubcategory={activeSubcategory}
+              onSelect={handleNavSelect}
+              colors={colors}
+            />
+          </div>
+
+          {/* Spacer to balance layout on desktop */}
+          <div className="w-10 hidden sm:block" />
         </div>
       </div>
     </div>
