@@ -6,16 +6,24 @@ import React, { useEffect, useRef } from "react";
  * Props:
  *   sceneConfig    — full scene object from panoConfig
  *   onHotspotClick — (targetSceneId) => void
+ *   onViewChange   — ({ yaw, pitch, fov }) => void  — fires on every frame while panning
  */
-const PanoramaViewer = ({ sceneConfig, onHotspotClick }) => {
+const PanoramaViewer = ({ sceneConfig, onHotspotClick, onViewChange }) => {
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
+
+  // Keep a stable ref so the Marzipano listener always sees the latest callback
+  const onViewChangeRef = useRef(onViewChange);
+  useEffect(() => {
+    onViewChangeRef.current = onViewChange;
+  }, [onViewChange]);
 
   useEffect(() => {
     if (!sceneConfig) return;
 
     let cleanupTimers = [];
     let isMounted = true;
+    let rafId = null;
 
     const loadMarzipano = () => {
       return new Promise((resolve, reject) => {
@@ -86,21 +94,22 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick }) => {
         transition: transform 0.25s ease, box-shadow 0.25s ease;
       `;
 
-      // ── Chevron-only SVG (no vertical line) ──
-      const rotationDeg = ((hotspot.rotation || 0) * 180) / Math.PI;
-      const chevronSize = Math.round(SIZE * 0.38);
+      // ── 360° Arrow + Lens SVG ──
+      const iconSize = Math.round(SIZE * 0.40);
       inner.innerHTML = `
         <svg
-          width="${chevronSize}" height="${chevronSize}"
+          width="${iconSize}" height="${iconSize}"
           viewBox="0 0 24 24"
           fill="none"
           stroke="rgba(80, 65, 55, 0.85)"
-          stroke-width="3"
+          stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          style="transform: rotate(${rotationDeg}deg);"
         >
-          <polyline points="6 15 12 8 18 15"/>
+          <path d="M21 12a9 9 0 1 1-3.6-7.2"/>
+          <polyline points="21 3 21 9 15 9"/>
+          <circle cx="12" cy="12" r="3" stroke-width="1.8"/>
+          <circle cx="12" cy="12" r="1" fill="rgba(80, 65, 55, 0.85)" stroke="none"/>
         </svg>
       `;
       wrapper.appendChild(inner);
@@ -202,6 +211,23 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick }) => {
 
         scene.switchTo();
 
+        // ── Live view change → radar rotation ──────────────
+        // RAF loop guarantees the radar tracks autorotate, user drag,
+        // and inertia — React state batching can't drop frames.
+        const pollView = () => {
+          if (!isMounted) return;
+          if (onViewChangeRef.current) {
+            onViewChangeRef.current({
+              yaw: view.yaw(),
+              pitch: view.pitch(),
+              fov: view.fov(),
+            });
+          }
+          rafId = requestAnimationFrame(pollView);
+        };
+        rafId = requestAnimationFrame(pollView);
+
+        // ── Autorotate ─────────────────────────────────────
         const autorotate = Marzipano.autorotate({
           yawSpeed: 0.015,
           targetPitch: 0,
@@ -238,6 +264,7 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick }) => {
 
     return () => {
       isMounted = false;
+      if (rafId) cancelAnimationFrame(rafId);
       cleanupTimers.forEach((timer) => clearTimeout(timer));
       if (viewerRef.current) {
         viewerRef.current.destroy();

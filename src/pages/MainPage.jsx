@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { gsap } from "/gsap.config.js";
 import PanoramaViewer from "../components/PanoramaViewer";
 import Logo from "../components/Logo";
@@ -13,6 +13,16 @@ import {
   preloadImages,
   getPreviewUrls,
 } from "../data/panoConfig";
+
+// ── Radar visual config ─────────────────────────────────
+const RADAR = {
+  size: 94,          // total SVG dimensions (px)
+  coneRadius: 40,    // how far the cone fan extends
+  coneSpread: 65,    // opening angle in degrees (wider = more visible)
+  dotRadius: 5.5,    // solid centre dot
+  dotStroke: 3,      // white ring thickness
+  haloRadius: 12,    // ambient glow circle
+};
 
 const MainPage = ({
   onClose,
@@ -31,34 +41,30 @@ const MainPage = ({
   const animationStartedRef = useRef(false);
   const navigate = useNavigate();
 
-  // Component refs
   const navRef = useRef(null);
   const mobileNavRef = useRef(null);
-
-  // Transition overlay
   const transitionOverlayRef = useRef(null);
-
-  // Mobile Floor Plan Button
   const mobileFloorPlanRef = useRef(null);
 
-  // State
   const [isMuted, setIsMuted] = useState(false);
   const isTransitioningRef = useRef(false);
 
-  // Navigation state
   const [activeCategory, setActiveCategory] = useState(null);
   const [activeSubcategory, setActiveSubcategory] = useState(null);
   const [activeSceneId, setActiveSceneId] = useState(null);
   const [activeSceneConfig, setActiveSceneConfig] = useState(null);
 
-  // Categories from config
+  // Refs for frame-perfect radar rotation (bypasses React re-render batching)
+  const liveYawRef = useRef(0);
+  const radarGroupRef = useRef(null);
+  const activeSceneConfigRef = useRef(null);
+
   const categories = getCategories(bhkType);
 
   const handleClick = () => {
     navigate("/");
   };
 
-  // Color theme
   const colors = {
     bg: "#927867",
     textPrimary: "#f5f0eb",
@@ -75,7 +81,6 @@ const MainPage = ({
       : "/assets/4bhk/floorplan/4BHK PLAN Main.webp";
   }, [bhkType]);
 
-  // --- Initialize default scene on mount ---
   useEffect(() => {
     const defaultScene = getDefaultScene(bhkType);
     if (defaultScene) {
@@ -86,11 +91,6 @@ const MainPage = ({
     }
   }, [bhkType]);
 
-  // ─────────────────────────────────────────────
-  //  GSAP zoom-in + fade transition
-  //  Only animates transform (scale) and opacity
-  //  for guaranteed 60fps compositing.
-  // ─────────────────────────────────────────────
   const transitionToScene = useCallback(
     (newScene, categoryId, subcategoryId) => {
       if (isTransitioningRef.current) return;
@@ -99,7 +99,6 @@ const MainPage = ({
       const panoLayer = imageRef.current;
       const overlay = transitionOverlayRef.current;
 
-      // Kill any in-progress tweens on these elements
       gsap.killTweensOf(panoLayer);
       gsap.killTweensOf(overlay);
 
@@ -109,7 +108,6 @@ const MainPage = ({
         },
       });
 
-      // Phase 1 — zoom in + fade out current scene
       tl.to(panoLayer, {
         scale: 1.12,
         opacity: 0,
@@ -117,18 +115,8 @@ const MainPage = ({
         ease: "power3.in",
       });
 
-      // Dark overlay rises alongside
-      tl.to(
-        overlay,
-        {
-          opacity: 1,
-          duration: 0.35,
-          ease: "power2.in",
-        },
-        0 // start at same time as zoom
-      );
+      tl.to(overlay, { opacity: 1, duration: 0.35, ease: "power2.in" }, 0);
 
-      // Phase 2 — swap scene while hidden
       tl.call(() => {
         setActiveCategory(categoryId);
         setActiveSubcategory(subcategoryId);
@@ -136,10 +124,7 @@ const MainPage = ({
         setActiveSceneConfig(newScene);
       });
 
-      // Tiny pause for React to mount the new PanoramaViewer
       tl.to({}, { duration: 0.15 });
-
-      // Phase 3 — reset scale to slightly zoomed, then reveal
       tl.set(panoLayer, { scale: 1.06 });
 
       tl.to(panoLayer, {
@@ -149,20 +134,11 @@ const MainPage = ({
         ease: "power2.out",
       });
 
-      tl.to(
-        overlay,
-        {
-          opacity: 0,
-          duration: 0.4,
-          ease: "power2.out",
-        },
-        "<" // same start as the reveal
-      );
+      tl.to(overlay, { opacity: 0, duration: 0.4, ease: "power2.out" }, "<");
     },
     []
   );
 
-  // --- Handle nav category/subcategory selection ---
   const handleNavSelect = useCallback(
     (categoryId, subcategoryId) => {
       if (
@@ -171,25 +147,17 @@ const MainPage = ({
       )
         return;
 
-      const result = getCategoryDefaultScene(
-        bhkType,
-        categoryId,
-        subcategoryId
-      );
+      const result = getCategoryDefaultScene(bhkType, categoryId, subcategoryId);
       if (!result) return;
 
       const { scene, subcategoryId: resolvedSubId } = result;
-
-      // Preload previews
       const urls = getPreviewUrls(bhkType, categoryId, resolvedSubId);
       preloadImages(urls);
-
       transitionToScene(scene, categoryId, resolvedSubId);
     },
     [bhkType, activeCategory, activeSubcategory, transitionToScene]
   );
 
-  // --- Handle hotspot click ---
   const handleHotspotClick = useCallback(
     (targetSceneId) => {
       if (isTransitioningRef.current) return;
@@ -206,7 +174,26 @@ const MainPage = ({
     [bhkType, transitionToScene]
   );
 
-  // --- Set initial hidden states ---
+  const handleViewChange = useCallback(({ yaw }) => {
+    liveYawRef.current = yaw;
+    if (radarGroupRef.current) {
+      const config = activeSceneConfigRef.current;
+      const deg = (config?.radarNorthOffset ?? 0) + (yaw * 180) / Math.PI;
+      radarGroupRef.current.style.transform = `rotate(${deg}deg)`;
+    }
+  }, []);
+
+  // Keep the scene config ref in sync + set initial radar angle on scene change
+  useEffect(() => {
+    activeSceneConfigRef.current = activeSceneConfig;
+    if (radarGroupRef.current && activeSceneConfig) {
+      const deg =
+        (activeSceneConfig.radarNorthOffset ?? 0) +
+        (liveYawRef.current * 180) / Math.PI;
+      radarGroupRef.current.style.transform = `rotate(${deg}deg)`;
+    }
+  }, [activeSceneConfig]);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -227,7 +214,6 @@ const MainPage = ({
     if (navEl) gsap.set(navEl, { opacity: 0, y: 10 });
   }, []);
 
-  // --- Entrance animation ---
   useEffect(() => {
     if (!isReady || animationStartedRef.current || !containerRef.current)
       return;
@@ -252,17 +238,9 @@ const MainPage = ({
       tl.to(navEl, { opacity: 1, y: 0, duration: 0.3 }, "-=0.1");
     }
 
-    tl.to(
-      miniMapRef.current,
-      { opacity: 1, scale: 1, duration: 0.3 },
-      "-=0.1"
-    );
+    tl.to(miniMapRef.current, { opacity: 1, scale: 1, duration: 0.3 }, "-=0.1");
     tl.to(soundControlsRef.current, { opacity: 1, duration: 0.2 }, "-=0.1");
-    tl.to(
-      mobileFloorPlanRef.current,
-      { opacity: 1, scale: 1, duration: 0.2 },
-      "-=0.1"
-    );
+    tl.to(mobileFloorPlanRef.current, { opacity: 1, scale: 1, duration: 0.2 }, "-=0.1");
 
     const mobileNavEl = mobileNavRef.current?.getContainerEl();
     if (mobileNavEl) {
@@ -270,7 +248,6 @@ const MainPage = ({
     }
   }, [isReady]);
 
-  // Close button hover
   const handleCloseEnter = () => {
     if (closeRef.current) {
       gsap.to(closeRef.current, {
@@ -294,9 +271,20 @@ const MainPage = ({
     }
   };
 
-  // Minimap dot position
-  // Minimap dot reads position from the active scene's minimapPos
+  // ── Radar geometry (computed once) ────────────────────
   const currentHighlight = activeSceneConfig?.minimapPos || { x: 50, y: 50 };
+
+  const cx = RADAR.size / 2;
+  const cy = RADAR.size / 2;
+
+  const wedgePath = useMemo(() => {
+    const half = (RADAR.coneSpread / 2) * (Math.PI / 180);
+    const x1 = cx + Math.sin(-half) * RADAR.coneRadius;
+    const y1 = cy - Math.cos(-half) * RADAR.coneRadius;
+    const x2 = cx + Math.sin(half) * RADAR.coneRadius;
+    const y2 = cy - Math.cos(half) * RADAR.coneRadius;
+    return `M ${cx} ${cy} L ${x1} ${y1} A ${RADAR.coneRadius} ${RADAR.coneRadius} 0 0 1 ${x2} ${y2} Z`;
+  }, [cx, cy]);
 
   return (
     <div
@@ -304,9 +292,29 @@ const MainPage = ({
       className="min-h-screen w-full relative overflow-hidden"
       style={{ backgroundColor: colors.bg }}
     >
-      {/* Google Fonts */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Marcellus&display=swap');
+
+        @keyframes radarConePulse {
+          0%   { opacity: 0.85; }
+          50%  { opacity: 0.55; }
+          100% { opacity: 0.85; }
+        }
+        @keyframes radarRingExpand {
+          0%   { r: ${RADAR.dotRadius + RADAR.dotStroke + 1}; opacity: 0.6; }
+          70%  { opacity: 0.15; }
+          100% { r: ${RADAR.dotRadius + RADAR.dotStroke + 14}; opacity: 0; }
+        }
+        @keyframes radarRingExpand2 {
+          0%   { r: ${RADAR.dotRadius + RADAR.dotStroke + 1}; opacity: 0.35; }
+          70%  { opacity: 0.1; }
+          100% { r: ${RADAR.dotRadius + RADAR.dotStroke + 10}; opacity: 0; }
+        }
+        @keyframes radarHaloBreath {
+          0%   { opacity: 0.2;  r: ${RADAR.haloRadius}; }
+          50%  { opacity: 0.35; r: ${RADAR.haloRadius + 3}; }
+          100% { opacity: 0.2;  r: ${RADAR.haloRadius}; }
+        }
       `}</style>
 
       {/* ── LAYER 1: Panorama ── */}
@@ -320,6 +328,7 @@ const MainPage = ({
             key={activeSceneConfig.id}
             sceneConfig={activeSceneConfig}
             onHotspotClick={handleHotspotClick}
+            onViewChange={handleViewChange}
           />
         ) : (
           <div
@@ -337,11 +346,7 @@ const MainPage = ({
       <div
         ref={transitionOverlayRef}
         className="absolute inset-0 pointer-events-none"
-        style={{
-          zIndex: 4,
-          backgroundColor: "#1a1814",
-          opacity: 0,
-        }}
+        style={{ zIndex: 4, backgroundColor: "#1a1814", opacity: 0 }}
       />
 
       {/* ── LAYER 3: Decorative overlay ── */}
@@ -560,7 +565,9 @@ const MainPage = ({
             </button>
           </div>
 
-          {/* Mini Map (desktop) */}
+          {/* ═══════════════════════════════════════════
+              Mini Map (desktop) with radar indicator
+              ═══════════════════════════════════════════ */}
           <div
             ref={miniMapRef}
             onClick={onFloorPlanClick}
@@ -596,34 +603,178 @@ const MainPage = ({
               </span>
             </div>
 
-            {/* Room Highlight Dot */}
-            <div
-              className="minimap-highlight absolute w-4 h-4 rounded-full border-2"
+            {/* ── RADAR: Premium directional indicator ── */}
+            <svg
+              width={RADAR.size}
+              height={RADAR.size}
+              viewBox={`0 0 ${RADAR.size} ${RADAR.size}`}
               style={{
-                backgroundColor: "rgba(148, 112, 88, 0.9)",
-                borderColor: colors.textPrimary,
-                boxShadow: `
-                  0 0 8px ${colors.textAccent},
-                  0 0 16px ${colors.textAccent}80,
-                  0 0 24px ${colors.textAccent}40
-                `,
-                left: currentHighlight.x + "%",
-                top: currentHighlight.y + "%",
-                transform: "translate(-50%, -50%)",
-                transition:
-                  "left 0.5s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                position: "absolute",
+                left: `${currentHighlight.x}%`,
+                top: `${currentHighlight.y}%`,
+                transform: `translate(-50%, -50%)`,
+                pointerEvents: "none",
                 zIndex: 20,
+                overflow: "visible",
+                transition:
+                  "left 0.5s cubic-bezier(0.4,0,0.2,1), top 0.5s cubic-bezier(0.4,0,0.2,1)",
               }}
             >
-              <div
-                className="absolute inset-0 rounded-full animate-ping"
-                style={{
-                  backgroundColor: colors.textAccent,
-                  opacity: 0.4,
-                  animationDuration: "2s",
-                }}
+              <defs>
+                {/* Cone fill: warm centre → transparent edge */}
+                <radialGradient id="rdrConeFill" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%"   stopColor="#c17f59" stopOpacity="1"    />
+                  <stop offset="20%"  stopColor="#c17f59" stopOpacity="0.75" />
+                  <stop offset="50%"  stopColor="#d4a574" stopOpacity="0.4"  />
+                  <stop offset="80%"  stopColor="#E8C4A0" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#E8C4A0" stopOpacity="0"    />
+                </radialGradient>
+
+                {/* Brighter inner cone overlay for depth */}
+                <radialGradient id="rdrConeHighlight" cx="50%" cy="50%" r="40%">
+                  <stop offset="0%"   stopColor="#fff"    stopOpacity="0.2"  />
+                  <stop offset="40%"  stopColor="#fff"    stopOpacity="0.05" />
+                  <stop offset="100%" stopColor="#fff"    stopOpacity="0"    />
+                </radialGradient>
+
+                {/* Subtle outer glow for the dot */}
+                <radialGradient id="rdrDotGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%"   stopColor="#c17f59" stopOpacity="0.5"  />
+                  <stop offset="60%"  stopColor="#c17f59" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#c17f59" stopOpacity="0"    />
+                </radialGradient>
+
+                {/* Soft blur for the cone body */}
+                <filter id="rdrSoftBlur">
+                  <feGaussianBlur stdDeviation="1" />
+                </filter>
+
+                {/* Crisp edge glow */}
+                <filter id="rdrEdgeGlow">
+                  <feGaussianBlur stdDeviation="0.6" />
+                </filter>
+
+                {/* Drop shadow for the centre dot */}
+                <filter id="rdrDotShadow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3" />
+                </filter>
+              </defs>
+
+              {/* 1. Ambient halo — breathes gently behind everything */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={RADAR.haloRadius}
+                fill="url(#rdrDotGlow)"
+                style={{ animation: "radarHaloBreath 3s ease-in-out infinite" }}
               />
-            </div>
+
+              {/* 2. Cone group — rotates via ref (updated every RAF frame) */}
+              <g
+                ref={radarGroupRef}
+                style={{
+                  transformOrigin: `${cx}px ${cy}px`,
+                  willChange: "transform",
+                }}
+              >
+                {/* 2a. Main cone fill — soft-blurred */}
+                <g
+                  filter="url(#rdrSoftBlur)"
+                  style={{ animation: "radarConePulse 2.8s ease-in-out infinite" }}
+                >
+                  <path d={wedgePath} fill="url(#rdrConeFill)" />
+                </g>
+
+                {/* 2b. Inner highlight overlay — adds luminance depth */}
+                <path
+                  d={wedgePath}
+                  fill="url(#rdrConeHighlight)"
+                  opacity="0.6"
+                />
+
+                {/* 2c. Left edge line — thin bright border */}
+                {(() => {
+                  const half = (RADAR.coneSpread / 2) * (Math.PI / 180);
+                  const ex = cx + Math.sin(-half) * RADAR.coneRadius;
+                  const ey = cy - Math.cos(-half) * RADAR.coneRadius;
+                  return (
+                    <line
+                      x1={cx} y1={cy} x2={ex} y2={ey}
+                      stroke="#E8C4A0"
+                      strokeWidth="0.8"
+                      opacity="0.5"
+                      filter="url(#rdrEdgeGlow)"
+                    />
+                  );
+                })()}
+
+                {/* 2d. Right edge line */}
+                {(() => {
+                  const half = (RADAR.coneSpread / 2) * (Math.PI / 180);
+                  const ex = cx + Math.sin(half) * RADAR.coneRadius;
+                  const ey = cy - Math.cos(half) * RADAR.coneRadius;
+                  return (
+                    <line
+                      x1={cx} y1={cy} x2={ex} y2={ey}
+                      stroke="#E8C4A0"
+                      strokeWidth="0.8"
+                      opacity="0.5"
+                      filter="url(#rdrEdgeGlow)"
+                    />
+                  );
+                })()}
+              </g>
+
+              {/* 3. Expanding pulse ring 1 — terracotta tint */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={RADAR.dotRadius + RADAR.dotStroke + 1}
+                fill="none"
+                stroke="#c17f59"
+                strokeWidth="1.5"
+                opacity="0"
+                style={{ animation: "radarRingExpand 2.6s ease-out infinite" }}
+              />
+
+              {/* 4. Expanding pulse ring 2 — staggered, lighter */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={RADAR.dotRadius + RADAR.dotStroke + 1}
+                fill="none"
+                stroke="#E8C4A0"
+                strokeWidth="1"
+                opacity="0"
+                style={{ animation: "radarRingExpand2 2.6s ease-out 1.3s infinite" }}
+              />
+
+              {/* 5. Outer white ring with shadow */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={RADAR.dotRadius + RADAR.dotStroke}
+                fill="#f5f0eb"
+                filter="url(#rdrDotShadow)"
+              />
+
+              {/* 6. Terracotta centre dot */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={RADAR.dotRadius}
+                fill="#c17f59"
+              />
+
+              {/* 7. Tiny specular highlight on dot */}
+              <circle
+                cx={cx - 1.5}
+                cy={cy - 1.5}
+                r="1.5"
+                fill="#fff"
+                opacity="0.35"
+              />
+            </svg>
           </div>
         </div>
       </div>
