@@ -62,7 +62,7 @@ const panoConfig = {
         id: "living",
         label: "Living Room",
         type: "single",
-        defaultSceneId: "9-living-camera-1",
+        defaultSceneId: "5-foyar-2",
         scenes: [
           {
             id: "9-living-camera-1",
@@ -72,7 +72,7 @@ const panoConfig = {
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
             initialView: { yaw: 2.8377337884437885, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 42, y: 32 },
+            minimapPos: { x: 50, y: 45 },
             linkHotspots: [
               { yaw: 2.196204212031982, pitch: 0.28689489587124584, rotation: 0, target: "8-living-camera-2" },
               { yaw: 2.833011672811134, pitch: 0.1821835698062877, rotation: 0, target: "7-living-camera-3" },
@@ -91,7 +91,7 @@ const panoConfig = {
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
             initialView: { yaw: -2.214048618140458, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 46, y: 30 },
+            minimapPos: { x: 37, y: 45 },
             linkHotspots: [
               { yaw: -1.0408554318441503, pitch: 0.34294671528529364, rotation: 0, target: "9-living-camera-1" },
               { yaw: -2.760543135671579, pitch: 0.3023445786116987, rotation: 0, target: "7-living-camera-3" },
@@ -110,8 +110,8 @@ const panoConfig = {
             preview: "/assets/4bhk/pano/living/7-living-camera-3/preview.jpg",
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
-            initialView: { yaw: -0.888338079119869, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 48, y: 36 },
+            initialView: { yaw: -0.388338079119869, pitch: 0, fov: 1.4479588735060953 },
+            minimapPos: { x: 37, y: 30 },
             linkHotspots: [
               { yaw: 0.4908657123915088, pitch: 0.47797858557975026, rotation: 0, target: "8-living-camera-2" },
               { yaw: -0.3253901885269954, pitch: 0.12371290458823836, rotation: 0, target: "9-living-camera-1" },
@@ -128,13 +128,14 @@ const panoConfig = {
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
             initialView: { yaw: -2.52544217263409, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 28, y: 28 },
+            minimapPos: { x: 56.5, y: 45 },
             linkHotspots: [
               { yaw: 2.0450442588504183, pitch: 0.5022796117971833, rotation: 0, target: "9-living-camera-1" },
               { yaw: 2.024309881184023, pitch: 0.10535853838907627, rotation: 0, target: "6-4bhk-pdr" },
               { yaw: -2.6445273113212124, pitch: 0.25904740381480273, rotation: 0, target: "5-foyar-2" },
               { yaw: 2.277031920586773, pitch: 0.013909768096556974, rotation: 0, target: "0-bedroom3-1" },
               { yaw: -1.0590848490796851, pitch: 0.21433711120654486, rotation: 0, target: "17-master-bedroom-1" },
+              { yaw: -0.8179863012485382, pitch: 0.30436437470637614, rotation: 0, target: "21-bedroom1-1" }
             ],
           },
           {
@@ -145,7 +146,7 @@ const panoConfig = {
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
             initialView: { yaw: 0.5616852959570409, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 22, y: 25 },
+            minimapPos: { x: 56.5, y: 25 },
             linkHotspots: [
               { yaw: 0.5223432841043625, pitch: 0.2962538490480142, rotation: 0, target: "4-foyar-1" },
             ],
@@ -158,7 +159,7 @@ const panoConfig = {
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
             initialView: { yaw: 0.3325769221995518, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 38, y: 42 },
+            minimapPos: { x: 31, y: 45 },
             linkHotspots: [
               { yaw: -2.9700932070303736, pitch: 0.21538916898961347, rotation: 0, target: "9-living-camera-1" },
               { yaw: 2.803885251790822, pitch: 0.5103802219398172, rotation: 0, target: "8-living-camera-2" },
@@ -183,7 +184,7 @@ const panoConfig = {
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
             initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 50, y: 62 },
+            minimapPos: { x: 51, y: 59 },
             linkHotspots: [
               { yaw: -0.029903115475022446, pitch: 0.3694352250887931, rotation: 0, target: "10-kitchen-2" },
               { yaw: 1.9588217554552063, pitch: -0.015806839274475237, rotation: 0, target: "6-4bhk-pdr" },
@@ -199,7 +200,7 @@ const panoConfig = {
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
             initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 52, y: 68 },
+            minimapPos: { x: 51, y: 72 },
             linkHotspots: [
               { yaw: 0.015744929059888335, pitch: 0.3992753627925296, rotation: 0, target: "11-kitchen-1" },
             ],
@@ -227,7 +228,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 82, y: 22 },
+            minimapPos: { x: 67, y: 58 },
                 linkHotspots: [
                   { yaw: -2.909947569930777, pitch: 0.4777396217048846, rotation: 0, target: "17-master-bedroom-1" },
                   { yaw: 2.584723531690461, pitch: 0.5154503864049538, rotation: 0, target: "4-foyar-1" },
@@ -242,7 +243,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 86, y: 20 },
+            minimapPos: { x: 67, y: 76 },
                 linkHotspots: [
                   { yaw: 2.504583592441171, pitch: 0.5504036618167127, rotation: 0, target: "22-4bhk-dresser-1" },
                   { yaw: 2.509203688285764, pitch: 0.249838030872219, rotation: 0, target: "23-4bhk-bedroom1-bathroom" },
@@ -257,7 +258,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0.41917914079945895, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 88, y: 26 },
+            minimapPos: { x: 74, y: 76 },
                 linkHotspots: [
                   { yaw: -1.3496118784404647, pitch: 0.7609481835037624, rotation: 0, target: "24-bedroom1-2" },
                   { yaw: 1.5996738590451134, pitch: 0.20784374172956177, rotation: 0, target: "23-4bhk-bedroom1-bathroom" },
@@ -271,7 +272,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 90, y: 18 },
+            minimapPos: { x: 83, y: 76 },
                 linkHotspots: [
                   { yaw: -2.990419318396958, pitch: 0.4394396207571596, rotation: 0, target: "22-4bhk-dresser-1" },
                   { yaw: -3.071980540604528, pitch: 0.2597725596929674, rotation: 0, target: "24-bedroom1-2" },
@@ -294,7 +295,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 82, y: 45 },
+            minimapPos: { x: 27, y: 65 },
                 linkHotspots: [
                   { yaw: -0.629576565468966, pitch: 0.3550611678647577, rotation: 0, target: "12-bedroom2-2" },
                   { yaw: 2.004726348611486, pitch: 0.6693495944749657, rotation: 0, target: "14-4bhk-dresser-2" },
@@ -310,8 +311,8 @@ const panoConfig = {
                 preview: "/assets/4bhk/pano/bedrooms/bedroom-2/12-bedroom2-2/preview.jpg",
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
-                initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 86, y: 43 },
+                initialView: { yaw: -0.5, pitch: 0, fov: DEFAULT_FOV },
+            minimapPos: { x: 27, y: 75 },
                 linkHotspots: [
                   { yaw: 0.26875617807956864, pitch: 0.2788507938387301, rotation: 0, target: "14-4bhk-dresser-2" },
                   { yaw: 0.3409096981108348, pitch: 0.40256535283503325, rotation: 0, target: "13-bedroom2-1" },
@@ -326,7 +327,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: -0.7256270801820079, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 88, y: 50 },
+            minimapPos: { x: 27, y: 55 },
                 linkHotspots: [
                   { yaw: -2.046145300779827, pitch: 0.3416640253332375, rotation: 0, target: "15-4bhk-bedroom2-bathroom" },
                   { yaw: 2.639090311476558, pitch: 0.26244651817933473, rotation: 0, target: "12-bedroom2-2" },
@@ -341,7 +342,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0.9295394140013133, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 90, y: 42 },
+            minimapPos: { x: 16, y: 55 },
                 linkHotspots: [
                   { yaw: -2.96249836328494, pitch: 0.4483918039559587, rotation: 0, target: "14-4bhk-dresser-2" },
                 ],
@@ -354,7 +355,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: -0.6198258261734004, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 78, y: 52 },
+            minimapPos: { x: 12, y: 69 },
                 linkHotspots: [
                   { yaw: 1.3481330638501383, pitch: 0.4513600682775216, rotation: 0, target: "13-bedroom2-1" },
                 ],
@@ -376,7 +377,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: -1.8123981611952864, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 82, y: 65 },
+            minimapPos: { x: 30, y: 35.5 },
                 linkHotspots: [
                   { yaw: -2.2036691563542146, pitch: 0.2779138320552512, rotation: 0, target: "3-bedroom3-2" },
                   { yaw: 1.0671015897093117, pitch: 0.5418821059341052, rotation: 0, target: "8-living-camera-2" },
@@ -391,7 +392,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 86, y: 63 },
+            minimapPos: { x: 20, y: 35.5 },
                 linkHotspots: [
                   { yaw: -0.05034435136866833, pitch: 0.34705809553624434, rotation: 0, target: "0-bedroom3-1" },
                   { yaw: 0.9550803972543545, pitch: 0.473747661701859, rotation: 0, target: "1-4bhk-dresser-3" },
@@ -405,7 +406,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: -2.2144134561084563, pitch: 0, fov: 1.4479588735060953 },
-            minimapPos: { x: 88, y: 70 },
+            minimapPos: { x: 23, y: 45 },
                 linkHotspots: [
                   { yaw: -0.6284954699376488, pitch: 0.7959267145079636, rotation: 0, target: "2-4bhk-bedroom3-bathroom" },
                   { yaw: 1.2490831120653052, pitch: 0.5241884818067408, rotation: 0, target: "3-bedroom3-2" },
@@ -419,7 +420,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 90, y: 62 },
+            minimapPos: { x: 17, y: 45 },
                 linkHotspots: [
                   { yaw: 1.7560754918133767, pitch: 0.8959686356301031, rotation: 0, target: "1-4bhk-dresser-3" },
                 ],
@@ -441,7 +442,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 62, y: 22 },
+            minimapPos: { x: 74, y: 46 },
                 linkHotspots: [
                   { yaw: -1.6346278490059518, pitch: 0.4741057408776026, rotation: 0, target: "20-master-bedroom-2" },
                   { yaw: 1.6310510161740517, pitch: 0.2233028208916643, rotation: 0, target: "4-foyar-1" },
@@ -456,7 +457,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 66, y: 20 },
+            minimapPos: { x: 81, y: 46 },
                 linkHotspots: [
                   { yaw: 0.7460744654867355, pitch: 0.41103224853968, rotation: 0, target: "17-master-bedroom-1" },
                   { yaw: 0.6696205617492232, pitch: 0.16030096333479626, rotation: 0, target: "4-foyar-1" },
@@ -471,7 +472,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 68, y: 26 },
+            minimapPos: { x: 82.5, y: 38 },
                 linkHotspots: [
                   { yaw: 0.18382966776930765, pitch: 0.5756774349750238, rotation: 0, target: "18-4bhk-masterbedroom-bathroom" },
                   { yaw: 1.8586383231702719, pitch: 0.9137131301938552, rotation: 0, target: "20-master-bedroom-2" },
@@ -485,7 +486,7 @@ const panoConfig = {
                 levels: LEVELS_2K,
                 faceSize: DEFAULT_FACE_SIZE,
                 initialView: { yaw: 0, pitch: 0, fov: DEFAULT_FOV },
-            minimapPos: { x: 70, y: 18 },
+            minimapPos: { x: 87, y: 46 },
                 linkHotspots: [
                   { yaw: 1.8118814010240296, pitch: 0.6520623223430491, rotation: 0, target: "19-4bhk-master-dresser3" },
                 ],
