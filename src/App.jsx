@@ -139,6 +139,19 @@ const AppContent = () => {
         />
         <Route path="*" element={<HomePage onExplore={navigateToMain} />} />
       </Routes>
+      <img
+            src="/images/Brainwing-logo.webp"
+            alt="Brainwing"
+            className="fixed bottom-3 left-24 w-30 z-[9999] pointer-events-none opacity-55
+             sm:bottom-2 sm:left-33 sm:w-35
+             md:bottom-2 md:left-45 md:w-30
+             lg:bottom-2 lg:left-50 lg:w-40
+             xl:bottom-2 xl:left-50 xl:w-42
+             2xl:bottom-2 2xl:left-50 2xl:w-46
+             3xl:bottom-2 3xl:left-50 3xl:w-44
+             4xl:bottom-2 4xl:left-50 4xl:w-50
+             5xl:bottom-2 5xl:left-50 5xl:w-62"
+          />
 
       <PageTransition
         isActive={isTransitioning}

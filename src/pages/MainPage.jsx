@@ -456,14 +456,14 @@ const MainPage = ({
 
       {/* ── Bottom Controls ── */}
       <div
-        className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-6"
+        className="absolute bottom-0 left-0 right-0 px-6 md:px-10 pb-6 pointer-events-none"
         style={{ zIndex: 20 }}
       >
         <div className="flex items-end justify-between gap-3 sm:gap-7">
           {/* Sound */}
           <div
             ref={soundControlsRef}
-            className="flex items-center gap-3 sm:w-[280px]"
+            className="flex items-center gap-3 sm:w-[280px] pointer-events-auto"
           >
             <button
               onClick={() => setIsMuted(!isMuted)}
@@ -503,7 +503,7 @@ const MainPage = ({
           </div>
 
           {/* Center: Nav (desktop) */}
-          <div className="hidden sm:flex flex-col items-center gap-2">
+          <div className="hidden sm:flex flex-col items-center gap-2 pointer-events-auto">
             <RoomNav
               ref={navRef}
               categories={categories}
@@ -515,7 +515,7 @@ const MainPage = ({
           </div>
 
           {/* Right (Mobile): Nav + Floor Plan */}
-          <div className="sm:hidden flex flex-col items-end gap-2">
+          <div className="sm:hidden flex flex-col items-end gap-2 pointer-events-auto">
             <MobileRoomNav
               ref={mobileNavRef}
               categories={categories}
@@ -571,7 +571,7 @@ const MainPage = ({
           <div
             ref={miniMapRef}
             onClick={onFloorPlanClick}
-            className="hidden md:block relative w-[280px] h-[180px] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.03] group"
+            className="hidden md:block relative w-[280px] h-[180px] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.03] group pointer-events-auto"
             style={{
               background: "rgba(125, 102, 88, 0.4)",
               backdropFilter: "blur(12px)",
