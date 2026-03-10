@@ -1,1090 +1,572 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useRef, useState, useCallback, useMemo } from "react";
 import { gsap, useGSAP } from "/gsap.config.js";
 import Logo from "../components/Logo";
+import RoomNav from "../components/RoomNav";
+import MobileRoomNav from "../components/MobileRoomNav";
+import { useNavigate } from "react-router-dom";
+import {
+  getCategories,
+  getCategoryDefaultScene,
+} from "../data/panoConfig";
 
-const HomePage = ({ onExplore }) => {
+// ── Collect EVERY scene (one marker per pano image) ──
+function getAllSceneMarkers(bhkType) {
+  const categories = getCategories(bhkType);
+  const markers = [];
+
+  for (const cat of categories) {
+    if (cat.type === "single") {
+      for (const scene of cat.scenes || []) {
+        if (scene.minimapPos) {
+          markers.push({
+            id: scene.id,
+            label: scene.label,
+            x: scene.minimapPos.x,
+            y: scene.minimapPos.y,
+            categoryId: cat.id,
+            subcategoryId: null,
+            sceneId: scene.id,
+          });
+        }
+      }
+    }
+
+    if (cat.type === "dropdown") {
+      for (const sub of cat.subcategories || []) {
+        for (const scene of sub.scenes || []) {
+          if (scene.minimapPos) {
+            markers.push({
+              id: scene.id,
+              label: scene.label,
+              x: scene.minimapPos.x,
+              y: scene.minimapPos.y,
+              categoryId: cat.id,
+              subcategoryId: sub.id,
+              sceneId: scene.id,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return markers;
+}
+
+const FloorPlanPage = ({
+  onClose,
+  onRoomSelect,
+  bhkType = "4bhk",
+  initialRoom = null,
+}) => {
   const containerRef = useRef(null);
-  const cursorRef = useRef(null);
-  const cursorDotRef = useRef(null);
-  const cursorTrailRef = useRef([]);
-  const logoRef = useRef(null);
-  const heroTextRef = useRef(null);
-  const heroSubRef = useRef(null);
-  const taglineRef = useRef(null);
-  const cardRef = useRef(null);
-  const leftCardRef = useRef(null);
-  const rightCardRef = useRef(null);
-  const leftButtonRef = useRef(null);
-  const rightButtonRef = useRef(null);
-  const leftButtonGlowRef = useRef(null);
-  const rightButtonGlowRef = useRef(null);
-  const orbsRef = useRef([]);
-  const particlesRef = useRef([]);
-  const loadingRef = useRef(null);
-  const loadingTextRef = useRef(null);
-  const loadingProgressRef = useRef(null);
-  const glowOrbRef = useRef(null);
-  const soundControlsRef = useRef(null);
-  const auraBurstRef = useRef(null);
-
   const [isMuted, setIsMuted] = useState(false);
-  const [loadingPercent, setLoadingPercent] = useState(0);
+  const logoRef = useRef(null);
+  const logoContainerRef = useRef(null);
+  const closeRef = useRef(null);
+  const navRef = useRef(null);
+  const mobileNavRef = useRef(null);
+  const navigate = useNavigate();
+  const markerRefs = useRef([]);
+
+  const [activeCategory, setActiveCategory] = useState("living");
+  const [activeSubcategory, setActiveSubcategory] = useState(null);
+  const [hoveredMarker, setHoveredMarker] = useState(null);
+
+  const categories = getCategories(bhkType);
+  const markers = useMemo(() => getAllSceneMarkers(bhkType), [bhkType]);
+
+  const handleClick = () => {
+    navigate("/");
+  };
 
   const colors = {
     bg: "#927867",
     textPrimary: "#f5f0eb",
     textSecondary: "#e8e0d8",
-    textAccent: "#ffffff",
-    glowPrimary: "rgba(245, 240, 235, 0.3)",
-    glowSecondary: "rgba(212, 165, 116, 0.25)",
+    textAccent: "#E8C4A0",
+    terracotta: "#c17f59",
+    terracottaDark: "#a65d3f",
+    terracottaLight: "#d4a574",
   };
 
-  // Custom cursor trail
-  useEffect(() => {
-    const trail = [];
-    for (let i = 0; i < 5; i++) {
-      const dot = document.createElement("div");
-      dot.style.cssText = `position:fixed;width:${6 - i}px;height:${
-        6 - i
-      }px;background:${
-        colors.textPrimary
-      };border-radius:50%;pointer-events:none;z-index:9998;opacity:${
-        0.4 - i * 0.07
-      };will-change:transform;transform:translate(-50%,-50%);`;
-      document.body.appendChild(dot);
-      trail.push(dot);
-    }
-    cursorTrailRef.current = trail;
-    return () => trail.forEach((dot) => dot.remove());
-  }, []);
+  const floorplanImage = `/assets/${bhkType}/floorplan/${bhkType.toUpperCase()} PLAN.jpg`;
 
-  // Cursor animation
-  useEffect(() => {
-    let mouseX = 0,
-      mouseY = 0,
-      cursorX = 0,
-      cursorY = 0,
-      dotX = 0,
-      dotY = 0;
-    const trailPositions = cursorTrailRef.current.map(() => ({ x: 0, y: 0 }));
-    let animationId;
+  const handleMarkerClick = useCallback(
+    (marker) => {
+      setActiveCategory(marker.categoryId);
+      setActiveSubcategory(marker.subcategoryId);
 
-    const handleMouseMove = (e) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-    };
-
-    const animate = () => {
-      cursorX += (mouseX - cursorX) * 0.15;
-      cursorY += (mouseY - cursorY) * 0.15;
-      dotX += (mouseX - dotX) * 0.35;
-      dotY += (mouseY - dotY) * 0.35;
-
-      if (cursorRef.current) {
-        cursorRef.current.style.transform = `translate(${cursorX - 24}px, ${
-          cursorY - 24
-        }px)`;
+      if (onRoomSelect) {
+        onRoomSelect({
+          categoryId: marker.categoryId,
+          subcategoryId: marker.subcategoryId,
+          sceneId: marker.sceneId,
+        });
       }
-      if (cursorDotRef.current) {
-        cursorDotRef.current.style.transform = `translate(${dotX - 6}px, ${
-          dotY - 6
-        }px)`;
+    },
+    [onRoomSelect]
+  );
+
+  const handleNavSelect = useCallback(
+    (categoryId, subcategoryId) => {
+      setActiveCategory(categoryId);
+      setActiveSubcategory(subcategoryId);
+
+      const result = getCategoryDefaultScene(bhkType, categoryId, subcategoryId);
+      if (!result) return;
+
+      const { scene, categoryId: resolvedCat, subcategoryId: resolvedSub } = result;
+
+      if (onRoomSelect) {
+        onRoomSelect({
+          categoryId: resolvedCat,
+          subcategoryId: resolvedSub,
+          sceneId: scene.id,
+        });
       }
+    },
+    [bhkType, onRoomSelect]
+  );
 
-      trailPositions.forEach((pos, i) => {
-        const target =
-          i === 0 ? { x: mouseX, y: mouseY } : trailPositions[i - 1];
-        pos.x += (target.x - pos.x) * (0.35 - i * 0.05);
-        pos.y += (target.y - pos.y) * (0.35 - i * 0.05);
-        if (cursorTrailRef.current[i]) {
-          cursorTrailRef.current[i].style.transform = `translate(${
-            pos.x - 3
-          }px, ${pos.y - 3}px)`;
-        }
-      });
-
-      animationId = requestAnimationFrame(animate);
-    };
-
-    animate();
-    window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      cancelAnimationFrame(animationId);
-    };
-  }, []);
-
-  // Set initial states immediately on mount (before loading completes)
-  useEffect(() => {
-    gsap.set(logoRef.current, { opacity: 0, x: -80 });
-    gsap.set(soundControlsRef.current, { opacity: 0, x: -50 });
-    gsap.set(cardRef.current, { opacity: 0, scale: 0.9, y: 50 });
-    gsap.set(heroTextRef.current, { opacity: 0, y: 30 });
-    gsap.set(heroSubRef.current, { opacity: 0, y: 30 });
-    gsap.set(taglineRef.current, { opacity: 0, y: 20 });
-    gsap.set(leftCardRef.current, { opacity: 0, x: -30, y: 20 });
-    gsap.set(rightCardRef.current, { opacity: 0, x: 30, y: 20 });
-    gsap.set(leftButtonRef.current, { opacity: 0, scale: 0.8 });
-    gsap.set(rightButtonRef.current, { opacity: 0, scale: 0.8 });
-    gsap.set(leftButtonGlowRef.current, { opacity: 0 });
-    gsap.set(rightButtonGlowRef.current, { opacity: 0 });
-    gsap.set(glowOrbRef.current, { opacity: 0, scale: 0.8 });
-    gsap.set(auraBurstRef.current, { scale: 0, opacity: 0 });
-    orbsRef.current.forEach((orb) => {
-      if (orb) gsap.set(orb, { opacity: 0, scale: 0 });
-    });
-    particlesRef.current.forEach((particle) => {
-      if (particle) gsap.set(particle, { opacity: 0 });
-    });
-  }, []);
-
-  // Loading animation
+  // Entry animations
   useGSAP(
     () => {
-      const loadingTl = gsap.timeline({
-        onComplete: () => startRevealAnimation(),
-      });
+      const ctx = gsap.context(() => {
+        gsap.set(logoContainerRef.current, { opacity: 0, x: -30 });
+        gsap.set(closeRef.current, { opacity: 0, x: 30 });
+        gsap.set(".floor-plan-container", { opacity: 0, scale: 0.95 });
+        gsap.set(".sound-controls", { opacity: 0, x: -20 });
+        gsap.set(".particle", { opacity: 0 });
+        gsap.set(".room-marker", { opacity: 0, scale: 0 });
 
-      const counter = { val: 0 };
+        const navEl = navRef.current?.getContainerEl();
+        if (navEl) gsap.set(navEl, { opacity: 0, y: 10 });
 
-      loadingTl
-        .to(loadingTextRef.current, {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power3.out",
-        })
-        .to(
-          counter,
-          {
-            val: 100,
-            duration: 2,
-            ease: "power2.inOut",
-            onUpdate: () => {
-              if (loadingProgressRef.current) {
-                loadingProgressRef.current.textContent = `${Math.round(
-                  counter.val
-                )}%`;
-              }
-            },
-          },
+        const mobileNavEl = mobileNavRef.current?.getContainerEl();
+        if (mobileNavEl) gsap.set(mobileNavEl, { opacity: 0, scale: 0.95 });
+
+        const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+
+        tl.to(
+          ".floor-plan-container",
+          { opacity: 1, scale: 1, duration: 0.6 },
           0.2
         )
-        .to(
-          [loadingTextRef.current, loadingProgressRef.current], 
-          { 
-            opacity: 0, 
-            y: -30,
-            duration: 0.4 
-          }, 
-          2
-        )
-        .to(
-          loadingRef.current,
+          .to(logoContainerRef.current, { opacity: 1, x: 0, duration: 0.5 }, 0.3)
+          .add(() => {
+            if (logoRef.current?.animateIn) {
+              logoRef.current.animateIn({ duration: 0.3, ease: "power2.out" });
+            }
+          }, 0.35)
+          .to(closeRef.current, { opacity: 1, x: 0, duration: 0.5 }, 0.3);
+
+        if (navEl) {
+          tl.to(navEl, { opacity: 1, y: 0, duration: 0.4 }, 0.4);
+        }
+        if (mobileNavEl) {
+          tl.to(mobileNavEl, { opacity: 1, scale: 1, duration: 0.3 }, 0.4);
+        }
+
+        tl.to(".sound-controls", { opacity: 1, x: 0, duration: 0.4 }, 0.5);
+
+        // Stagger in all scene markers
+        tl.to(
+          ".room-marker",
           {
-            clipPath: "polygon(0 0, 100% 0, 100% 0, 0 0)",
-            duration: 1,
-            ease: "power4.inOut",
+            opacity: 1,
+            scale: 1,
+            duration: 0.3,
+            stagger: 0.03,
+            ease: "back.out(1.7)",
           },
-          2.2
+          0.6
         );
+
+        tl.to(".particle", { opacity: 0.3, stagger: 0.1, duration: 0.5 }, 0.6);
+
+        gsap.utils.toArray(".particle").forEach((particle, i) => {
+          gsap.to(particle, {
+            y: `-=${50 + Math.random() * 50}`,
+            x: `+=${20 + Math.random() * 30}`,
+            opacity: 0,
+            duration: 8 + Math.random() * 4,
+            delay: i * 0.5,
+            repeat: -1,
+            ease: "none",
+          });
+        });
+      }, containerRef);
+
+      return () => ctx.revert();
     },
     { scope: containerRef }
   );
 
-  const startRevealAnimation = () => {
-    const masterTl = gsap.timeline();
-
-    masterTl.to(
-      auraBurstRef.current,
-      { scale: 3, opacity: 0.8, duration: 0.1, ease: "none" },
-      0
-    );
-    masterTl.to(
-      auraBurstRef.current,
-      { scale: 3, opacity: 0, duration: 1.4, ease: "power2.out" },
-      0.1
-    );
-
-    masterTl.add(
-      () => logoRef.current?.animateIn({ duration: 1, ease: "power3.out" }),
-      0.2
-    );
-
-    masterTl.to(
-      soundControlsRef.current,
-      { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" },
-      0.5
-    );
-    masterTl.to(
-      cardRef.current,
-      { opacity: 1, scale: 1, y: 0, duration: 1.2, ease: "power3.out" },
-      0.4
-    );
-    masterTl.to(
-      heroTextRef.current,
-      { opacity: 1, y: 0, duration: 1, ease: "power3.out" },
-      0.8
-    );
-    masterTl.to(
-      heroSubRef.current,
-      { opacity: 1, y: 0, duration: 1, ease: "power3.out" },
-      1.0
-    );
-    masterTl.to(
-      taglineRef.current,
-      { opacity: 1, y: 0, duration: 1, ease: "power3.out" },
-      1.2
-    );
-
-    masterTl.to(
-      leftCardRef.current,
-      { opacity: 1, x: 0, y: 0, duration: 0.8, ease: "power3.out" },
-      1.3
-    );
-    masterTl.to(
-      rightCardRef.current,
-      { opacity: 1, x: 0, y: 0, duration: 0.8, ease: "power3.out" },
-      1.4
-    );
-
-    masterTl.to(
-      leftButtonRef.current,
-      { opacity: 1, scale: 1, duration: 0.6, ease: "elastic.out(1, 0.7)" },
-      1.6
-    );
-    masterTl.to(
-      rightButtonRef.current,
-      { opacity: 1, scale: 1, duration: 0.6, ease: "elastic.out(1, 0.7)" },
-      1.7
-    );
-    masterTl.to(
-      leftButtonGlowRef.current,
-      { opacity: 0.6, duration: 0.6 },
-      1.8
-    );
-    masterTl.to(
-      rightButtonGlowRef.current,
-      { opacity: 0.6, duration: 0.6 },
-      1.9
-    );
-
-    masterTl.to(
-      glowOrbRef.current,
-      { opacity: 0.4, scale: 1, duration: 2, ease: "power2.out" },
-      0.5
-    );
-
-    orbsRef.current.forEach((orb, i) => {
-      if (orb) {
-        masterTl.to(
-          orb,
-          {
-            opacity: 0.3,
-            scale: 1,
-            duration: 1.2,
-            ease: "elastic.out(1, 0.5)",
-          },
-          0.6 + i * 0.15
-        );
-      }
-    });
-
-    particlesRef.current.forEach((particle, i) => {
-      if (particle) {
-        masterTl.to(particle, { opacity: 0.5, duration: 1.5 }, 1 + i * 0.03);
-      }
-    });
-
-    startContinuousAnimations();
-  };
-
-  const startContinuousAnimations = () => {
-    gsap.to(leftButtonGlowRef.current, {
-      scale: 1.5,
-      opacity: 0.3,
-      duration: 2,
-      yoyo: true,
-      repeat: -1,
-      ease: "sine.inOut",
-    });
-    gsap.to(rightButtonGlowRef.current, {
-      scale: 1.5,
-      opacity: 0.3,
-      duration: 2,
-      yoyo: true,
-      repeat: -1,
-      ease: "sine.inOut",
-      delay: 0.5,
-    });
-
-    gsap.to(glowOrbRef.current, {
-      scale: 1.2,
-      opacity: 0.3,
-      duration: 4,
-      yoyo: true,
-      repeat: -1,
-      ease: "sine.inOut",
-    });
-
-    orbsRef.current.forEach((orb, i) => {
-      if (orb)
-        gsap.to(orb, {
-          y: "+=" + (20 + i * 10),
-          rotation: 360,
-          duration: 12 + i * 3,
-          yoyo: true,
-          repeat: -1,
-          ease: "sine.inOut",
-        });
-    });
-
-    particlesRef.current.forEach((particle) => {
-      if (particle) {
-        gsap.set(particle, {
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight,
-        });
-        gsap.to(particle, {
-          y: "-=" + (80 + Math.random() * 100),
-          duration: 15 + Math.random() * 10,
-          repeat: -1,
-          ease: "none",
-          onRepeat: () =>
-            gsap.set(particle, {
-              y: window.innerHeight + 50,
-              x: Math.random() * window.innerWidth,
-            }),
-        });
-        gsap.to(particle, {
-          opacity: Math.random() * 0.4 + 0.1,
-          duration: 3 + Math.random() * 2,
-          yoyo: true,
-          repeat: -1,
-          ease: "sine.inOut",
-        });
-      }
-    });
-  };
-
-  const handleButtonEnter = (buttonRef, glowRef) => {
-    gsap.to(buttonRef.current, {
-      scale: 1.05,
+  const handleCloseEnter = useCallback(() => {
+    gsap.to(closeRef.current, {
+      rotation: 90,
+      scale: 1.1,
+      backgroundColor: "rgba(245, 240, 235, 0.3)",
       duration: 0.3,
       ease: "power2.out",
     });
-    gsap.to(glowRef.current, { scale: 2, opacity: 0.8, duration: 0.3 });
-  };
+  }, []);
 
-  const handleButtonLeave = (buttonRef, glowRef) => {
-    gsap.to(buttonRef.current, { scale: 1, duration: 0.3, ease: "power2.out" });
-    gsap.to(glowRef.current, { scale: 1, opacity: 0.6, duration: 0.3 });
-  };
-
-  const handleButtonClick = (bhkType) => {
-    const buttonRef = bhkType === "4bhk" ? leftButtonRef : rightButtonRef;
-    gsap.to(buttonRef.current, {
-      scale: 1.1,
-      duration: 0.15,
+  const handleCloseLeave = useCallback(() => {
+    gsap.to(closeRef.current, {
+      rotation: 0,
+      scale: 1,
+      backgroundColor: "rgba(245, 240, 235, 0.15)",
+      duration: 0.3,
       ease: "power2.out",
-      onComplete: () => {
-        onExplore && onExplore(bhkType);
-      },
     });
-  };
+  }, []);
 
-  const addToOrbs = (el) => {
-    if (el && !orbsRef.current.includes(el)) orbsRef.current.push(el);
-  };
-  const addToParticles = (el) => {
-    if (el && !particlesRef.current.includes(el)) particlesRef.current.push(el);
-  };
+  const handleMarkerEnter = useCallback((markerId, el) => {
+    setHoveredMarker(markerId);
+    gsap.to(el, { scale: 1.35, duration: 0.3, ease: "power2.out" });
+  }, []);
+
+  const handleMarkerLeave = useCallback((el) => {
+    setHoveredMarker(null);
+    gsap.to(el, { scale: 1, duration: 0.3, ease: "power2.out" });
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className="h-screen max-h-screen relative overflow-hidden"
-      style={{ background: colors.bg, cursor: "none" }}
+      className="h-screen w-full relative overflow-hidden flex flex-col"
+      style={{ backgroundColor: colors.bg }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Marcellus&display=swap');
-        .card-shine { background: linear-gradient(125deg, transparent 30%, rgba(255,255,255,0.05) 45%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 55%, transparent 70%); background-size: 300% 300%; animation: cardShine 6s ease-in-out infinite; }
-        @keyframes cardShine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .bhk-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .bhk-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); }
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Marcellus&display=swap');
 
-        /*
-         * TV Wall Layout — lg+ only
-         * Maps to a 3×3 TV grid where each cell = 33.333vw × 33.333vh
-         *
-         *   [top-left]      [top-center]     [top-right]
-         *   [mid-left:4BHK] [mid-center:txt] [mid-right:3BHK]
-         *   [bot-left]      [bot-center]     [bot-right]
-         */
-        @media (min-width: 1024px) {
-          /* Card wrapper becomes invisible full-width container */
-          .tv-wall-card {
-            max-width: none !important;
-            width: 100% !important;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-          }
-          .tv-wall-card .card-shine {
-            display: none !important;
-          }
-
-          /* Card inner becomes a 3-column CSS grid matching TV cells */
-          .tv-wall-card-inner {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr 1fr;
-            grid-template-rows: auto;
-            align-items: center;
-            justify-items: center;
-            padding: 0 !important;
-            gap: 0;
-          }
-
-          /* Title block → center column */
-          .tv-wall-title {
-            grid-column: 2;
-            grid-row: 1;
-            text-align: center;
-            padding: 1rem 2rem;
-          }
-
-          /* BHK row uses display:contents so children go into the grid */
-          .tv-wall-bhk-row {
-            display: contents !important;
-          }
-
-          /* 4BHK wrapper → left column */
-          .tv-wall-bhk-left {
-            grid-column: 1;
-            grid-row: 1;
-            width: 100%;
-            max-width: none !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 3vh 3vw;
-          }
-
-          /* 3BHK wrapper → right column */
-          .tv-wall-bhk-right {
-            grid-column: 3;
-            grid-row: 1;
-            width: 100%;
-            max-width: none !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 3vh 3vw;
-          }
-
-          /* BHK cards sized to fit their cell */
-          .tv-wall-bhk-left .bhk-card,
-          .tv-wall-bhk-right .bhk-card {
-            width: 100%;
-            max-width: 28vw;
-          }
-
-          /* Hide divider and bottom decoration on TV wall */
-          .tv-wall-divider { display: none !important; }
-          .tv-wall-deco { display: none !important; }
-
-          /* Main area: full bleed, vertically centered */
-          .tv-wall-main {
-            padding: 0 !important;
-          }
+        @keyframes markerPulse {
+          0%   { r: 8; opacity: 0.45; }
+          70%  { opacity: 0.08; }
+          100% { r: 18; opacity: 0; }
         }
-
-        /* 1920px+ refinement */
-        @media (min-width: 1920px) {
-          .tv-wall-bhk-left .bhk-card,
-          .tv-wall-bhk-right .bhk-card {
-            max-width: 26vw;
-            padding: 2rem !important;
-          }
+        @keyframes markerPulse2 {
+          0%   { r: 8; opacity: 0.25; }
+          70%  { opacity: 0.04; }
+          100% { r: 15; opacity: 0; }
         }
-
-        /* 3840px+ ultra-wide */
-        @media (min-width: 3840px) {
-          .tv-wall-bhk-left .bhk-card,
-          .tv-wall-bhk-right .bhk-card {
-            max-width: 24vw;
-            padding: 3rem !important;
-          }
+        @keyframes markerGlow {
+          0%   { opacity: 0.15; r: 10; }
+          50%  { opacity: 0.28; r: 13; }
+          100% { opacity: 0.15; r: 10; }
         }
       `}</style>
 
-      {/* Custom Cursor (desktop only) */}
-      <div
-        ref={cursorRef}
-        className="fixed w-12 h-12 rounded-full hidden md:block"
-        style={{
-          zIndex: 9999,
-          border: `2px solid ${colors.textPrimary}`,
-          pointerEvents: "none",
-          boxShadow: `0 0 20px ${colors.glowPrimary}`,
-          top: 0,
-          left: 0,
-        }}
-      />
-      <div
-        ref={cursorDotRef}
-        className="fixed w-3 h-3 rounded-full hidden md:block"
-        style={{
-          zIndex: 9999,
-          pointerEvents: "none",
-          backgroundColor: colors.textPrimary,
-          boxShadow: `0 0 10px ${colors.textPrimary}`,
-          top: 0,
-          left: 0,
-        }}
-      />
-
-      {/* Loading Screen */}
-      <div ref={containerRef}>
-      <div
-        ref={loadingRef}
-        className="fixed inset-0 flex flex-col items-center justify-center"
-        style={{
-          zIndex: 100,
-          background: colors.bg,
-          clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
-        }}
-      >
-        <div className="relative flex flex-col items-center justify-center">
-          <div
-            ref={loadingTextRef}
-            className="flex flex-col items-center mb-6 sm:mb-8"
-            style={{
-              opacity: 0,
-              transform: "translateY(20px)",
-            }}
-          >
-            <img
-              src="/assets/common/rudraksh-name.svg"
-              alt="Rudraksh Logo"
-              className="h-12 sm:h-16 mb-6" 
-            />
-            <div className="flex items-center justify-center">
-              <img
-                src="/assets/common/rudraksh-chakra.svg"
-                alt="Rudraksh Spinning Loader"
-                className="animate-spin"
-                style={{ animationDuration: "5s" }}
-              />
-            </div>
-          </div>
-          <div className="flex justify-center items-center w-48 sm:w-64">
-            <span
-              ref={loadingProgressRef}
-              className="text-2xl font-light font-mono tabular-nums tracking-wider"
-              style={{
-                color: colors.textPrimary,
-                textShadow: `0 0 15px ${colors.textAccent}`,
-              }}
-            >
-              0%
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-      {/* Aura Burst Effect */}
-      <div
-        ref={auraBurstRef}
-        className="fixed w-[100px] h-[100px] rounded-full"
-        style={{
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%) scale(0)",
-          background: `radial-gradient(circle, ${colors.textPrimary} 0%, transparent 70%)`,
-          pointerEvents: "none",
-          zIndex: 90,
-          opacity: 0,
-        }}
-      />
-
-      {/* Background Glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          ref={glowOrbRef}
-          className="absolute w-[300px] sm:w-[450px] md:w-[600px] h-[300px] sm:h-[450px] md:h-[600px] rounded-full"
-          style={{
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%) scale(0.8)",
-            background:
-              "radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(245, 240, 235, 0.05) 40%, transparent 70%)",
-            filter: "blur(50px)",
-            opacity: 0,
-          }}
-        />
-      </div>
-
-      {/* Floating Orbs */}
-      <div
-        className="fixed inset-0 overflow-hidden pointer-events-none"
-        style={{ zIndex: 2 }}
-      >
-        {[...Array(4)].map((_, i) => (
-          <div
-            key={`orb-${i}`}
-            ref={addToOrbs}
-            className="absolute rounded-full"
-            style={{
-              width: `${80 + i * 40}px`,
-              height: `${80 + i * 40}px`,
-              left: `${10 + i * 20}%`,
-              top: `${15 + i * 15}%`,
-              background: `radial-gradient(circle, rgba(245, 240, 235, ${
-                0.06 - i * 0.01
-              }) 0%, rgba(255, 255, 255, ${
-                0.03 - i * 0.005
-              }) 50%, transparent 70%)`,
-              filter: "blur(30px)",
-              opacity: 0,
-              transform: "scale(0)",
-            }}
-          />
-        ))}
-      </div>
-
       {/* Particles */}
       <div
-        className="fixed inset-0 overflow-hidden pointer-events-none hidden sm:block"
-        style={{ zIndex: 3 }}
+        className="fixed inset-0 overflow-hidden pointer-events-none"
+        style={{ zIndex: 6 }}
       >
-        {[...Array(15)].map((_, i) => (
+        {[...Array(6)].map((_, i) => (
           <div
-            key={`p-${i}`}
-            ref={addToParticles}
-            className="absolute rounded-full"
+            key={i}
+            className="particle absolute rounded-full"
             style={{
-              width: `${2 + Math.random() * 3}px`,
-              height: `${2 + Math.random() * 3}px`,
-              backgroundColor:
-                i % 2 === 0 ? colors.textPrimary : colors.textSecondary,
-              opacity: 0,
+              width: `${3 + (i % 2)}px`,
+              height: `${3 + (i % 2)}px`,
+              backgroundColor: colors.textPrimary,
+              left: `${15 + i * 15}%`,
+              top: `${70 + (i % 3) * 10}%`,
             }}
           />
         ))}
       </div>
 
-      {/* Main Layout */}
-      <div className="relative h-full flex flex-col" style={{ zIndex: 10 }}>
-        {/* Header */}
-        <header className="shrink-0 flex justify-between items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4 ">
+      {/* Header */}
+      <header
+        className="flex-none flex justify-between items-center px-6 md:px-10 py-3 sm:py-4 md:py-5"
+        style={{ zIndex: 20 }}
+      >
+        <div ref={logoContainerRef}>
           <Logo
             ref={logoRef}
             className={"w-32 sm:w-40 md:w-48 lg:w-56 xl:w-44 h-auto"}
+            onClick={handleClick}
           />
-        </header>
+        </div>
 
-        {/* Main Content - Card centered here */}
-        <main className="flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 md:px-16 tv-wall-main">
-          {/* THE CARD */}
-          <div
-            ref={cardRef}
-            className="w-full max-w-5xl xl:max-w-6xl rounded-2xl relative tv-wall-card"
-            style={{
-              opacity: 0,
-              background: "rgba(230, 216, 204, 0.05)",
-              border: "1px solid rgba(245, 240, 235, 0.15)",
-              boxShadow: "0 25px 70px rgba(0, 0, 0, 0.15)",
-            }}
+        <button
+          ref={closeRef}
+          onClick={onClose}
+          onMouseEnter={handleCloseEnter}
+          onMouseLeave={handleCloseLeave}
+          className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-full cursor-pointer border"
+          style={{
+            backgroundColor: "rgba(245, 240, 235, 0.15)",
+            borderColor: "rgba(245, 240, 235, 0.3)",
+            backdropFilter: "blur(10px)",
+          }}
+          aria-label="Close"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            className="w-4 h-4 md:w-5 md:h-5"
+            style={{ stroke: colors.textPrimary }}
           >
-            {/* Shine effect overlay */}
-            <div className="absolute inset-0 card-shine rounded-2xl pointer-events-none" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="6" y1="18" x2="18" y2="6" />
+          </svg>
+        </button>
+      </header>
 
-            {/* Card Content */}
-            <div className="relative px-4 sm:px-8 md:px-12 lg:px-16 py-6 sm:py-8 md:py-10 text-center tv-wall-card-inner">
-              
-              {/* Title block — center column on TV wall */}
-              <div className="tv-wall-title">
-                {/* Apartments Subtitle */}
-                <div
-                  ref={heroSubRef}
-                  className="flex items-center justify-center gap-3 sm:gap-4 md:gap-6 mb-2 sm:mb-3"
-                  style={{ opacity: 0 }}
-                >
-                  <span
-                    className="w-10 sm:w-14 md:w-20 h-px"
-                    style={{
-                      background: `linear-gradient(to right, transparent, ${colors.textPrimary})`,
-                    }}
-                  />
-                  <span
-                    className="text-xs sm:text-sm md:text-base lg:text-lg uppercase tracking-[0.25em] sm:tracking-[0.3em] md:tracking-[0.4em]"
-                    style={{
-                      fontFamily: "'Marcellus', serif",
-                      color: colors.textSecondary,
-                    }}
-                  >
-                    Apartments
-                  </span>
-                  <span
-                    className="w-10 sm:w-14 md:w-20 h-px"
-                    style={{
-                      background: `linear-gradient(to left, transparent, ${colors.textPrimary})`,
-                    }}
-                  />
-                </div>
+      {/* Main Content */}
+      <main
+        className="flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 md:px-16"
+        style={{ zIndex: 10 }}
+      >
+        <div
+          className="floor-plan-container w-full h-full max-h-full max-w-5xl flex flex-col justify-center rounded-2xl overflow-hidden p-4 sm:p-6 md:p-8"
+          style={{
+            background: "rgba(230, 216, 204, 0.2)",
+            border: "1px solid rgba(245, 240, 235, 0.12)",
+            boxShadow: "0 25px 70px rgba(0, 0, 0, 0.15)",
+          }}
+        >
+          {/* Title */}
+          <div className="flex-none text-center mb-3">
+            <h2
+              className="text-xl sm:text-2xl md:text-3xl font-light"
+              style={{
+                fontFamily: "'Cinzel', serif",
+                letterSpacing: "0.08em",
+                color: colors.textPrimary,
+              }}
+            >
+              {bhkType.toUpperCase()} FLOOR PLAN
+            </h2>
+          </div>
 
-                {/* Tagline */}
-                <p
-                  ref={taglineRef}
-                  className="text-sm sm:text-base md:text-lg lg:text-xl italic mb-6 sm:mb-8 lg:mb-0"
-                  style={{
-                    fontFamily: "'Cormorant Garamond', serif",
-                    color: colors.textPrimary,
-                    fontWeight: 300,
-                    opacity: 0,
-                  }}
-                >
-                  Between stillness & city
-                </p>
-              </div>
+          {/* Floor Plan Image with ALL Scene Markers */}
+          <div className="flex-1 min-h-0 w-full flex items-center justify-center">
+            <div className="relative inline-block max-w-full max-h-full">
+              <img
+                src={floorplanImage}
+                alt={`${bhkType.toUpperCase()} Floor Plan`}
+                className="block max-w-full max-h-full drop-shadow-lg"
+                style={{ objectFit: "contain" }}
+                draggable={false}
+              />
 
-              {/* Two BHK Options */}
-              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 md:gap-8 justify-center items-stretch w-full max-w-4xl mx-auto px-4 sm:px-0 tv-wall-bhk-row">
-                
-                {/* 4 BHK — middle-left cell on TV wall */}
-                <div className="tv-wall-bhk-left flex-1 w-full sm:max-w-sm">
-                  <div
-                    ref={leftCardRef}
-                    className="bhk-card w-full rounded-xl p-4 sm:p-6 md:p-8"
-                    style={{
-                      opacity: 0,
-                      background: "rgba(245, 240, 235, 0.08)",
-                      border: "1px solid rgba(245, 240, 235, 0.2)",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <div className="mb-4">
-                      <h3
-                        className="text-2xl sm:text-3xl md:text-4xl font-light"
-                        style={{
-                          fontFamily: "'Cinzel', serif",
-                          color: colors.textPrimary,
-                        }}
+              {/* ── Scene Marker Overlay (1 per pano) ── */}
+              <div className="absolute inset-0" style={{ zIndex: 5, top: "210px" }}>
+                {markers.map((marker, idx) => {
+                  const isHovered = hoveredMarker === marker.id;
+
+                  return (
+                    <div
+                      key={marker.id}
+                      className="room-marker absolute "
+                      ref={(el) => (markerRefs.current[idx] = el)}
+                      style={{
+                        left: `${marker.x}%`,
+                        top: `${marker.y}%`,
+                        transform: "translate(-50%, -50%)",
+                        cursor: "pointer",
+                        zIndex: isHovered ? 15 : 10,
+                      }}
+                      onClick={() => handleMarkerClick(marker)}
+                      onMouseEnter={(e) =>
+                        handleMarkerEnter(marker.id, e.currentTarget)
+                      }
+                      onMouseLeave={(e) =>
+                        handleMarkerLeave(e.currentTarget)
+                      }
+                    >
+                      {/* Compact SVG marker for dense placement */}
+                      <svg
+                        width="36"
+                        height="36"
+                        viewBox="0 0 36 36"
+                        style={{ overflow: "visible", display: "block" }}
                       >
-                        4 BHK
-                      </h3>
-                      <p
-                        className="text-[10px] sm:text-xs uppercase tracking-[0.2em] mt-1"
-                        style={{
-                          fontFamily: "'Marcellus', serif",
-                          color: colors.textSecondary,
-                        }}
-                      >
-                        101-801
-                      </p>
-                    </div>
-                    <div className="mb-6">
-                      <p
-                        className="text-[10px] sm:text-xs uppercase tracking-[0.15em] mb-2"
-                        style={{
-                          fontFamily: "'Marcellus', serif",
-                          color: colors.textSecondary,
-                        }}
-                      >
-                        Area
-                      </p>
-                      <p
-                        className="text-xl sm:text-2xl md:text-3xl font-light"
-                        style={{
-                          fontFamily: "'Cinzel', serif",
-                          color: colors.textPrimary,
-                        }}
-                      >
-                        3912
-                        <span
-                          className="text-sm sm:text-base ml-1"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Sq. Ft.
-                        </span>
-                      </p>
-                    </div>
-                    <div className="relative inline-block w-full">
-                      <div
-                        ref={leftButtonGlowRef}
-                        className="absolute inset-0 rounded-full"
-                        style={{
-                          background: `radial-gradient(circle, ${colors.glowPrimary} 0%, ${colors.glowSecondary} 50%, transparent 70%)`,
-                          filter: "blur(20px)",
-                          transform: "scale(1.3)",
-                          pointerEvents: "none",
-                          opacity: 0,
-                        }}
-                      />
-                      <button
-                        ref={leftButtonRef}
-                        type="button"
-                        onClick={() => handleButtonClick("4bhk")}
-                        onMouseEnter={() =>
-                          handleButtonEnter(leftButtonRef, leftButtonGlowRef)
-                        }
-                        onMouseLeave={() =>
-                          handleButtonLeave(leftButtonRef, leftButtonGlowRef)
-                        }
-                        className="relative w-full px-4 sm:px-6 py-3 sm:py-4 rounded-full overflow-hidden group"
-                        style={{
-                          background: "rgba(245, 240, 235, 0.15)",
-                          border: "1px solid rgba(245, 240, 235, 0.3)",
-                          backdropFilter: "blur(10px)",
-                          boxShadow: "0 10px 40px rgba(0, 0, 0, 0.1)",
-                          opacity: 0,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <div
-                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                        <defs>
+                          <radialGradient
+                            id={`mg-${marker.id}`}
+                            cx="50%"
+                            cy="50%"
+                            r="50%"
+                          >
+                            <stop offset="0%" stopColor="#c17f59" stopOpacity="0.5" />
+                            <stop offset="60%" stopColor="#c17f59" stopOpacity="0.12" />
+                            <stop offset="100%" stopColor="#c17f59" stopOpacity="0" />
+                          </radialGradient>
+                          <filter
+                            id={`ms-${marker.id}`}
+                            x="-50%"
+                            y="-50%"
+                            width="200%"
+                            height="200%"
+                          >
+                            <feDropShadow
+                              dx="0"
+                              dy="0.8"
+                              stdDeviation="1.5"
+                              floodColor="#000"
+                              floodOpacity="0.3"
+                            />
+                          </filter>
+                        </defs>
+
+                        {/* Ambient glow */}
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="10"
+                          fill={`url(#mg-${marker.id})`}
+                          style={{ animation: "markerGlow 3s ease-in-out infinite" }}
+                        />
+
+                        {/* Pulse ring 1 */}
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="8"
+                          fill="none"
+                          stroke="#c17f59"
+                          strokeWidth="1"
+                          opacity="0"
+                          style={{ animation: "markerPulse 2.6s ease-out infinite" }}
+                        />
+
+                        {/* Pulse ring 2 — staggered */}
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="8"
+                          fill="none"
+                          stroke="#E8C4A0"
+                          strokeWidth="0.7"
+                          opacity="0"
                           style={{
-                            background:
-                              "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)",
+                            animation: "markerPulse2 2.6s ease-out 1.3s infinite",
                           }}
                         />
-                        <span
-                          className="text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.2em] relative whitespace-nowrap"
-                          style={{
-                            fontFamily: "'Marcellus', serif",
-                            color: colors.textPrimary,
-                          }}
-                        >
-                          Explore 4 BHK
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Divider — hidden on TV wall */}
-                <div
-                  className="hidden sm:block w-px self-stretch tv-wall-divider"
-                  style={{
-                    background: `linear-gradient(to bottom, transparent, ${colors.textPrimary}40, transparent)`,
-                  }}
-                />
-
-                {/* 3 BHK — middle-right cell on TV wall */}
-                <div className="tv-wall-bhk-right flex-1 w-full sm:max-w-sm">
-                  <div
-                    ref={rightCardRef}
-                    className="bhk-card w-full rounded-xl p-4 sm:p-6 md:p-8"
-                    style={{
-                      opacity: 0,
-                      background: "rgba(245, 240, 235, 0.08)",
-                      border: "1px solid rgba(245, 240, 235, 0.2)",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <div className="mb-4">
-                      <h3
-                        className="text-2xl sm:text-3xl md:text-4xl font-light"
-                        style={{
-                          fontFamily: "'Cinzel', serif",
-                          color: colors.textPrimary,
-                        }}
-                      >
-                        3 BHK
-                      </h3>
-                      <p
-                        className="text-[10px] sm:text-xs uppercase tracking-[0.2em] mt-1"
-                        style={{
-                          fontFamily: "'Marcellus', serif",
-                          color: colors.textSecondary,
-                        }}
-                      >
-                        102-802
-                      </p>
-                    </div>
-                    <div className="mb-6">
-                      <p
-                        className="text-[10px] sm:text-xs uppercase tracking-[0.15em] mb-2"
-                        style={{
-                          fontFamily: "'Marcellus', serif",
-                          color: colors.textSecondary,
-                        }}
-                      >
-                        Area
-                      </p>
-                      <p
-                        className="text-xl sm:text-2xl md:text-3xl font-light"
-                        style={{
-                          fontFamily: "'Cinzel', serif",
-                          color: colors.textPrimary,
-                        }}
-                      >
-                        2856
-                        <span
-                          className="text-sm sm:text-base ml-1"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Sq. Ft.
-                        </span>
-                      </p>
-                    </div>
-                    <div className="relative inline-block w-full">
-                      <div
-                        ref={rightButtonGlowRef}
-                        className="absolute inset-0 rounded-full"
-                        style={{
-                          background: `radial-gradient(circle, ${colors.glowPrimary} 0%, ${colors.glowSecondary} 50%, transparent 70%)`,
-                          filter: "blur(20px)",
-                          transform: "scale(1.3)",
-                          pointerEvents: "none",
-                          opacity: 0,
-                        }}
-                      />
-                      <button
-                        ref={rightButtonRef}
-                        type="button"
-                        onClick={() => handleButtonClick("3bhk")}
-                        onMouseEnter={() =>
-                          handleButtonEnter(rightButtonRef, rightButtonGlowRef)
-                        }
-                        onMouseLeave={() =>
-                          handleButtonLeave(rightButtonRef, rightButtonGlowRef)
-                        }
-                        className="relative w-full px-4 sm:px-6 py-3 sm:py-4 rounded-full overflow-hidden group"
-                        style={{
-                          background: "rgba(245, 240, 235, 0.15)",
-                          border: "1px solid rgba(245, 240, 235, 0.3)",
-                          backdropFilter: "blur(10px)",
-                          boxShadow: "0 10px 40px rgba(0, 0, 0, 0.1)",
-                          opacity: 0,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <div
-                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                          style={{
-                            background:
-                              "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)",
-                          }}
+                        {/* Outer white ring */}
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="6"
+                          fill="#f5f0eb"
+                          filter={`url(#ms-${marker.id})`}
                         />
-                        <span
-                          className="text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.2em] relative whitespace-nowrap"
-                          style={{
-                            fontFamily: "'Marcellus', serif",
-                            color: colors.textPrimary,
-                          }}
-                        >
-                          Explore 3 BHK
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Bottom decorative element — hidden on TV wall */}
-              <div className="flex justify-center mt-6 sm:mt-8 tv-wall-deco">
-                <svg
-                  viewBox="0 0 150 30"
-                  fill="none"
-                  className="w-28 h-6 sm:w-36 sm:h-7 md:w-40 md:h-8"
-                >
-                  <path
-                    d="M0,15 L55,15"
-                    stroke={colors.textPrimary}
-                    strokeWidth="0.5"
-                    opacity="0.3"
-                  />
-                  <path
-                    d="M95,15 L150,15"
-                    stroke={colors.textPrimary}
-                    strokeWidth="0.5"
-                    opacity="0.3"
-                  />
-                  <polygon
-                    points="75,5 85,15 75,25 65,15"
-                    stroke={colors.textPrimary}
-                    strokeWidth="0.5"
-                    fill="none"
-                    opacity="0.3"
-                  />
-                  <circle
-                    cx="75"
-                    cy="15"
-                    r="2"
-                    fill={colors.textPrimary}
-                    opacity="0.4"
-                  />
-                </svg>
+                        {/* Terracotta centre */}
+                        <circle cx="18" cy="18" r="4" fill="#c17f59" />
+
+                        {/* Specular highlight */}
+                        <circle cx="16.8" cy="16.8" r="1.2" fill="#fff" opacity="0.35" />
+                      </svg>
+
+                      {/* Label tooltip */}
+                      <div
+                        className="absolute left-1/2 whitespace-nowrap px-2.5 py-1 rounded-full pointer-events-none"
+                        style={{
+                          bottom: "calc(100% + 2px)",
+                          fontFamily: "'Marcellus', serif",
+                          fontSize: "0.55rem",
+                          letterSpacing: "0.05em",
+                          color: colors.textPrimary,
+                          backgroundColor: "rgba(125, 102, 88, 0.92)",
+                          backdropFilter: "blur(8px)",
+                          boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
+                          border: "1px solid rgba(245,240,235,0.15)",
+                          opacity: isHovered ? 1 : 0,
+                          transform: isHovered
+                            ? "translateX(-50%) translateY(0)"
+                            : "translateX(-50%) translateY(4px)",
+                          transition: "opacity 0.2s, transform 0.2s",
+                        }}
+                      >
+                        {marker.label}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-        </main>
+        </div>
+      </main>
 
-        {/* Footer */}
-        <footer className="flex-shrink-0 flex items-center px-4 sm:px-8 md:px-16 py-2 sm:py-3 md:py-4">
-          <div
-            ref={soundControlsRef}
-            className="flex items-center gap-2 sm:gap-3"
-            style={{ opacity: 0 }}
-          >
+      {/* Footer */}
+      <div
+        className="flex-none px-4 md:px-10 pb-4 sm:pb-5 md:pb-6 pt-2"
+        style={{ zIndex: 20 }}
+      >
+        <div className="flex items-end justify-between">
+          {/* Sound Controls */}
+          <div className="sound-controls flex items-center gap-3">
             <button
               onClick={() => setIsMuted(!isMuted)}
-              className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 group relative"
+              className="w-10 h-10 flex items-center justify-center rounded-full transition-transform duration-200 hover:scale-110"
               style={{
-                backgroundColor: "rgba(245, 240, 235, 0.1)",
-                border: "1px solid rgba(245, 240, 235, 0.2)",
+                backgroundColor: "rgba(245, 240, 235, 0.15)",
                 backdropFilter: "blur(10px)",
+                border: "1px solid rgba(245, 240, 235, 0.2)",
               }}
             >
-              <div
-                className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{
-                  background: `radial-gradient(circle, ${colors.glowPrimary} 0%, transparent 70%)`,
-                }}
-              />
-              {isMuted ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 relative"
-                  stroke={colors.textSecondary}
-                  strokeWidth="1.5"
-                >
-                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                  <line x1="23" y1="9" x2="17" y2="15" />
-                  <line x1="17" y1="9" x2="23" y2="15" />
-                </svg>
-              ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 relative"
-                  stroke={colors.textSecondary}
-                  strokeWidth="1.5"
-                >
-                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="w-5 h-5"
+                stroke={colors.textSecondary}
+                strokeWidth="2"
+              >
+                <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                {!isMuted && (
                   <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-                </svg>
-              )}
+                )}
+                {isMuted && (
+                  <>
+                    <line x1="23" y1="9" x2="17" y2="15" />
+                    <line x1="17" y1="9" x2="23" y2="15" />
+                  </>
+                )}
+              </svg>
             </button>
-            <span
-              className="text-[7px] sm:text-[8px] md:text-[9px] uppercase tracking-[0.15em] sm:tracking-[0.2em]"
-              style={{
-                fontFamily: "'Marcellus', serif",
-                color: colors.textSecondary,
-              }}
-            >
-              {isMuted ? "Unmute" : "Sound"}
-            </span>
           </div>
-        </footer>
+
+          {/* Center: Nav (desktop) */}
+          <div className="hidden sm:flex flex-col items-center gap-2">
+            <RoomNav
+              ref={navRef}
+              categories={categories}
+              activeCategory={activeCategory}
+              activeSubcategory={activeSubcategory}
+              onSelect={handleNavSelect}
+              colors={colors}
+            />
+          </div>
+
+          {/* Right (Mobile): Nav */}
+          <div className="sm:hidden flex flex-col items-end gap-2">
+            <MobileRoomNav
+              ref={mobileNavRef}
+              categories={categories}
+              activeCategory={activeCategory}
+              activeSubcategory={activeSubcategory}
+              onSelect={handleNavSelect}
+              colors={colors}
+            />
+          </div>
+
+          {/* Spacer to balance layout on desktop */}
+          <div className="w-10 hidden sm:block" />
+        </div>
       </div>
     </div>
   );
 };
 
-export default HomePage;
+export default FloorPlanPage;

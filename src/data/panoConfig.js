@@ -268,6 +268,7 @@ const panoConfig = {
                   { yaw: 2.504583592441171, pitch: 0.5504036618167127, rotation: 0, target: "22-4bhk-dresser-1" },
                   { yaw: 2.509203688285764, pitch: 0.249838030872219, rotation: 0, target: "23-4bhk-bedroom1-bathroom" },
                   { yaw: 0.8842581282381481, pitch: 0.265374559658099, rotation: 0, target: "21-bedroom1-1" },
+                  { yaw: 0.882723531690461, pitch: 0.1354503864049538, rotation: 0, target: "4-foyar-1" }
                 ],
               },
               {
@@ -281,7 +282,7 @@ const panoConfig = {
                 minimapPos: { x: 74, y: 76 },
                 radarNorthOffset: 0,
                 linkHotspots: [
-                  { yaw: -1.3496118784404647, pitch: 0.7609481835037624, rotation: 0, target: "24-bedroom1-2" },
+                  { yaw: -1.3496118784404647, pitch: 0.4609481835037624, rotation: 0, target: "24-bedroom1-2" },
                   { yaw: 1.5996738590451134, pitch: 0.20784374172956177, rotation: 0, target: "23-4bhk-bedroom1-bathroom" },
                 ],
               },
@@ -321,7 +322,7 @@ const panoConfig = {
                 radarNorthOffset: 235,
                 linkHotspots: [
                   { yaw: -0.629576565468966, pitch: 0.3550611678647577, rotation: 0, target: "12-bedroom2-2" },
-                  { yaw: 2.004726348611486, pitch: 0.6693495944749657, rotation: 0, target: "14-4bhk-dresser-2" },
+                  { yaw: 2.004726348611486, pitch: 0.3693495944749657, rotation: 0, target: "14-4bhk-dresser-2" },
                   { yaw: 0.4070229909353884, pitch: 0.05269702808863208, rotation: 0, target: "16-4bhk-balcony1" },
                   { yaw: -2.541183058910521, pitch: 0.0024965779776895403, rotation: 0, target: "11-kitchen-1" },
                   { yaw: -2.4905682566083147, pitch: 0.6041732407497751, rotation: 0, target: "8-living-camera-2" },
@@ -438,7 +439,7 @@ const panoConfig = {
                 minimapPos: { x: 23, y: 45 },
                 radarNorthOffset: 0,
                 linkHotspots: [
-                  { yaw: -0.6284954699376488, pitch: 0.7959267145079636, rotation: 0, target: "2-4bhk-bedroom3-bathroom" },
+                  { yaw: -0.6284954699376488, pitch: 0.3959267145079636, rotation: 0, target: "2-4bhk-bedroom3-bathroom" },
                   { yaw: 1.2490831120653052, pitch: 0.5241884818067408, rotation: 0, target: "3-bedroom3-2" },
                 ],
               },
@@ -509,7 +510,7 @@ const panoConfig = {
                 radarNorthOffset: 90,
                 linkHotspots: [
                   { yaw: 0.18382966776930765, pitch: 0.5756774349750238, rotation: 0, target: "18-4bhk-masterbedroom-bathroom" },
-                  { yaw: 1.8586383231702719, pitch: 0.9137131301938552, rotation: 0, target: "20-master-bedroom-2" },
+                  { yaw: 1.8586383231702719, pitch: 0.5437131301938552, rotation: 0, target: "20-master-bedroom-2" },
                 ],
               },
               {
@@ -523,7 +524,7 @@ const panoConfig = {
                 minimapPos: { x: 87, y: 46 },
                 radarNorthOffset: 180,
                 linkHotspots: [
-                  { yaw: 1.8118814010240296, pitch: 0.6520623223430491, rotation: 0, target: "19-4bhk-master-dresser3" },
+                  { yaw: 1.8118814010240296, pitch: 0.2520623223430491, rotation: 0, target: "19-4bhk-master-dresser3" },
                 ],
               },
             ],
@@ -635,7 +636,7 @@ const panoConfig = {
             linkHotspots: [
               { yaw: 0.11337366082148392, pitch: 0.25995920240625736, rotation: 0, target: "2-foyar-1" },
               { yaw: 0.7054938492662792, pitch: 0.4561802186137829, rotation: 0, target: "18-living-area" },
-              { yaw: 1.994800682468009, pitch: 0.6656270125600283, rotation: 0, target: "15-bedroom1-view-1" },
+              { yaw: 1.874800682468009, pitch: 0.4656270125600283, rotation: 0, target: "15-bedroom1-view-1" },
               { yaw: -1.6901149474397101, pitch: 0.37609609776915676, rotation: 0, target: "6-masterbedroom-view-1" },
               { yaw: -1.6555550581644027, pitch: 0.17075373726056142, rotation: 0, target: "7-masterbedroom-view-2" },
             ],
@@ -676,7 +677,7 @@ const panoConfig = {
             minimapPos: { x: 68, y: 54 },    // ← placeholder
             radarNorthOffset: 180,              // ← placeholder
             linkHotspots: [
-              { yaw: 0.5120716678897406, pitch: 0.9717842250223683, rotation: 0, target: "17-kitchen-view-2" },
+              { yaw: 1.1120716678897406, pitch: 0.4717842250223683, rotation: 0, target: "17-kitchen-view-2" },
               { yaw: 2.724749239015847, pitch: 0.4850006299037144, rotation: 0, target: "1-dining1-view-1" },
               { yaw: -2.638022483631236, pitch: 0.41145203901698046, rotation: 0, target: "0-dining1-view-2" },
             ],
@@ -692,7 +693,7 @@ const panoConfig = {
             minimapPos: { x: 65, y: 59 },    // ← placeholder
             radarNorthOffset: 180,              // ← placeholder
             linkHotspots: [
-              { yaw: -2.4896900834773383, pitch: 0.6556360111251589, rotation: 0, target: "19-kitchen-view-1" },
+              { yaw: -2.4896900834773383, pitch: 0.5556360111251589, rotation: 0, target: "19-kitchen-view-1" },
               { yaw: -2.4678547037887846, pitch: 0.29984691084336035, rotation: 0, target: "0-dining1-view-2" },
             ],
           },
@@ -745,7 +746,7 @@ const panoConfig = {
                   { yaw: -1.5974194258584014, pitch: 0.04892701970219093, rotation: 0, target: "15-bedroom1-view-1" },
                   { yaw: 0.07080805029544734, pitch: 0.42496414571161445, rotation: 0, target: "8-masterbedroom-view-3" },
                   { yaw: 0.4060321412408072, pitch: 0.16876848423767754, rotation: 0, target: "10-masterbedroom-dresser" },
-                  { yaw: 2.887538125228545, pitch: 0.4925473991590614, rotation: 0, target: "9-masterbedroom-bathroom" },
+                  { yaw: 2.887538125228545, pitch: 0.1225473991590614, rotation: 0, target: "9-masterbedroom-bathroom" },
                 ],
               },
               {
@@ -776,7 +777,7 @@ const panoConfig = {
                 minimapPos: { x: 15, y: 67 },    // ← placeholder
                 radarNorthOffset: 200,              // ← placeholder
                 linkHotspots: [
-                  { yaw: -1.4736692065766075, pitch: 0.6429571862970551, rotation: 0, target: "8-masterbedroom-view-3" },
+                  { yaw: -1.4736692065766075, pitch: 0.5629571862970551, rotation: 0, target: "8-masterbedroom-view-3" },
                 ],
               },
               {

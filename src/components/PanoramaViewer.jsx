@@ -1,14 +1,16 @@
 import React, { useEffect, useRef } from "react";
+import { findSceneById } from "../data/panoConfig";
 
 /**
  * PanoramaViewer — Config-driven Marzipano viewer.
  *
  * Props:
  *   sceneConfig    — full scene object from panoConfig
+ *   bhkType        — "3bhk" | "4bhk" (used to resolve hotspot labels)
  *   onHotspotClick — (targetSceneId) => void
  *   onViewChange   — ({ yaw, pitch, fov }) => void  — fires on every frame while panning
  */
-const PanoramaViewer = ({ sceneConfig, onHotspotClick, onViewChange }) => {
+const PanoramaViewer = ({ sceneConfig, bhkType, onHotspotClick, onViewChange }) => {
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
 
@@ -43,6 +45,13 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick, onViewChange }) => {
       const SIZE = 54;
       const HALF = SIZE / 2;
 
+      // Resolve the target scene label
+      let targetLabel = "";
+      if (bhkType && hotspot.target) {
+        const result = findSceneById(bhkType, hotspot.target);
+        if (result) targetLabel = result.scene.label;
+      }
+
       const wrapper = document.createElement("div");
       wrapper.className = "pano-hotspot";
       wrapper.style.cssText = `
@@ -53,6 +62,51 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick, onViewChange }) => {
         cursor: pointer;
         position: relative;
       `;
+
+      // ── Tooltip ──
+      const tooltip = document.createElement("div");
+      tooltip.textContent = targetLabel;
+      tooltip.style.cssText = `
+        position: absolute;
+        bottom: calc(100% + 12px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        white-space: nowrap;
+        font-family: 'Marcellus', serif;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        color: #f5f0eb;
+        background: rgba(40, 32, 28, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 6px 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(245, 240, 235, 0.15);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+        z-index: 100;
+      `;
+
+      // Small arrow at bottom of tooltip
+      const arrow = document.createElement("div");
+      arrow.style.cssText = `
+        position: absolute;
+        bottom: -5px;
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        width: 8px;
+        height: 8px;
+        background: rgba(40, 32, 28, 0.85);
+        border-right: 1px solid rgba(245, 240, 235, 0.15);
+        border-bottom: 1px solid rgba(245, 240, 235, 0.15);
+      `;
+      tooltip.appendChild(arrow);
+
+      if (targetLabel) {
+        wrapper.appendChild(tooltip);
+      }
 
       // ── Outer static ring ──
       const outerRing = document.createElement("div");
@@ -127,7 +181,7 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick, onViewChange }) => {
         document.head.appendChild(style);
       }
 
-      // ── Hover: scale up + brighter ring ──
+      // ── Hover: scale up + brighter ring + show tooltip ──
       wrapper.addEventListener("mouseenter", () => {
         inner.style.transform = "scale(1.08)";
         inner.style.boxShadow = `
@@ -136,6 +190,11 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick, onViewChange }) => {
         `;
         outerRing.style.borderColor = "rgba(255, 255, 255, 0.75)";
         outerRing.style.boxShadow = "0 0 28px rgba(255, 255, 255, 0.3)";
+
+        if (targetLabel) {
+          tooltip.style.opacity = "1";
+          tooltip.style.transform = "translateX(-50%) translateY(0)";
+        }
       });
 
       wrapper.addEventListener("mouseleave", () => {
@@ -146,6 +205,11 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick, onViewChange }) => {
         `;
         outerRing.style.borderColor = "rgba(255, 255, 255, 0.5)";
         outerRing.style.boxShadow = "0 0 18px rgba(255, 255, 255, 0.15)";
+
+        if (targetLabel) {
+          tooltip.style.opacity = "0";
+          tooltip.style.transform = "translateX(-50%) translateY(6px)";
+        }
       });
 
       wrapper.addEventListener("click", (e) => {
@@ -271,7 +335,7 @@ const PanoramaViewer = ({ sceneConfig, onHotspotClick, onViewChange }) => {
         viewerRef.current = null;
       }
     };
-  }, [sceneConfig, onHotspotClick]);
+  }, [sceneConfig, bhkType, onHotspotClick]);
 
   return (
     <div

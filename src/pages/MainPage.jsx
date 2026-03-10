@@ -16,12 +16,12 @@ import {
 
 // ── Radar visual config ─────────────────────────────────
 const RADAR = {
-  size: 94,          // total SVG dimensions (px)
-  coneRadius: 40,    // how far the cone fan extends
-  coneSpread: 65,    // opening angle in degrees (wider = more visible)
-  dotRadius: 5.5,    // solid centre dot
-  dotStroke: 3,      // white ring thickness
-  haloRadius: 12,    // ambient glow circle
+  size: 94,
+  coneRadius: 40,
+  coneSpread: 65,
+  dotRadius: 5.5,
+  dotStroke: 3,
+  haloRadius: 12,
 };
 
 const MainPage = ({
@@ -54,7 +54,6 @@ const MainPage = ({
   const [activeSceneId, setActiveSceneId] = useState(null);
   const [activeSceneConfig, setActiveSceneConfig] = useState(null);
 
-  // Refs for frame-perfect radar rotation (bypasses React re-render batching)
   const liveYawRef = useRef(0);
   const radarGroupRef = useRef(null);
   const activeSceneConfigRef = useRef(null);
@@ -183,7 +182,6 @@ const MainPage = ({
     }
   }, []);
 
-  // Keep the scene config ref in sync + set initial radar angle on scene change
   useEffect(() => {
     activeSceneConfigRef.current = activeSceneConfig;
     if (radarGroupRef.current && activeSceneConfig) {
@@ -271,9 +269,8 @@ const MainPage = ({
     }
   };
 
-  // ── Radar geometry (computed once) ────────────────────
+  // ── Radar geometry ────────────────────
   const currentHighlight = activeSceneConfig?.minimapPos || { x: 50, y: 50 };
-
   const cx = RADAR.size / 2;
   const cy = RADAR.size / 2;
 
@@ -286,6 +283,14 @@ const MainPage = ({
     return `M ${cx} ${cy} L ${x1} ${y1} A ${RADAR.coneRadius} ${RADAR.coneRadius} 0 0 1 ${x2} ${y2} Z`;
   }, [cx, cy]);
 
+  const edgeLines = useMemo(() => {
+    const half = (RADAR.coneSpread / 2) * (Math.PI / 180);
+    return {
+      left:  { x: cx + Math.sin(-half) * RADAR.coneRadius, y: cy - Math.cos(-half) * RADAR.coneRadius },
+      right: { x: cx + Math.sin(half)  * RADAR.coneRadius, y: cy - Math.cos(half)  * RADAR.coneRadius },
+    };
+  }, [cx, cy]);
+
   return (
     <div
       ref={containerRef}
@@ -295,25 +300,25 @@ const MainPage = ({
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Marcellus&display=swap');
 
-        @keyframes radarConePulse {
-          0%   { opacity: 0.85; }
-          50%  { opacity: 0.55; }
-          100% { opacity: 0.85; }
+        @keyframes rdrConePulse {
+          0%   { opacity: 0.92; }
+          50%  { opacity: 0.65; }
+          100% { opacity: 0.92; }
         }
-        @keyframes radarRingExpand {
-          0%   { r: ${RADAR.dotRadius + RADAR.dotStroke + 1}; opacity: 0.6; }
-          70%  { opacity: 0.15; }
-          100% { r: ${RADAR.dotRadius + RADAR.dotStroke + 14}; opacity: 0; }
+        @keyframes rdrRingPulse1 {
+          0%   { r: ${RADAR.dotRadius + RADAR.dotStroke + 1}; opacity: 0.7; }
+          70%  { opacity: 0.12; }
+          100% { r: ${RADAR.dotRadius + RADAR.dotStroke + 15}; opacity: 0; }
         }
-        @keyframes radarRingExpand2 {
-          0%   { r: ${RADAR.dotRadius + RADAR.dotStroke + 1}; opacity: 0.35; }
-          70%  { opacity: 0.1; }
-          100% { r: ${RADAR.dotRadius + RADAR.dotStroke + 10}; opacity: 0; }
+        @keyframes rdrRingPulse2 {
+          0%   { r: ${RADAR.dotRadius + RADAR.dotStroke + 1}; opacity: 0.4; }
+          70%  { opacity: 0.08; }
+          100% { r: ${RADAR.dotRadius + RADAR.dotStroke + 11}; opacity: 0; }
         }
-        @keyframes radarHaloBreath {
-          0%   { opacity: 0.2;  r: ${RADAR.haloRadius}; }
-          50%  { opacity: 0.35; r: ${RADAR.haloRadius + 3}; }
-          100% { opacity: 0.2;  r: ${RADAR.haloRadius}; }
+        @keyframes rdrHaloBreath {
+          0%   { opacity: 0.3;  r: ${RADAR.haloRadius}; }
+          50%  { opacity: 0.5;  r: ${RADAR.haloRadius + 3}; }
+          100% { opacity: 0.3;  r: ${RADAR.haloRadius}; }
         }
       `}</style>
 
@@ -327,6 +332,7 @@ const MainPage = ({
           <PanoramaViewer
             key={activeSceneConfig.id}
             sceneConfig={activeSceneConfig}
+            bhkType={bhkType}
             onHotspotClick={handleHotspotClick}
             onViewChange={handleViewChange}
           />
@@ -381,10 +387,10 @@ const MainPage = ({
         }}
       />
 
-      {/* ── 360° indicator ── */}
+      {/* ── 360° indicator + scene name ── */}
       {activeSceneConfig && (
         <div
-          className="absolute top-10 left-1/2 transform -translate-x-1/2 items-center gap-2 px-2 py-1 rounded-full hidden md:flex"
+          className="absolute flex items-center gap-2 px-3 py-1.5 rounded-full top-[4.5rem] left-6 md:top-10 md:left-1/2 md:transform md:-translate-x-1/2"
           style={{
             zIndex: 20,
             backgroundColor: "rgba(125, 102, 88, 0.85)",
@@ -396,7 +402,7 @@ const MainPage = ({
           <svg
             viewBox="0 0 24 24"
             fill="none"
-            className="w-5 h-5"
+            className="w-5 h-5 flex-shrink-0"
             stroke={colors.textPrimary}
             strokeWidth="1.5"
           >
@@ -412,6 +418,21 @@ const MainPage = ({
             }}
           >
             Drag to explore 360°
+          </span>
+
+          <span
+            className="w-1 h-1 rounded-full flex-shrink-0"
+            style={{ backgroundColor: colors.textPrimary, opacity: 0.4 }}
+          />
+
+          <span
+            className="text-xs tracking-wide whitespace-nowrap"
+            style={{
+              fontFamily: "'Marcellus', serif",
+              color: colors.textAccent,
+            }}
+          >
+            {activeSceneConfig.label}
           </span>
         </div>
       )}
@@ -603,7 +624,7 @@ const MainPage = ({
               </span>
             </div>
 
-            {/* ── RADAR: Premium directional indicator ── */}
+            {/* ── RADAR: Dark brown directional indicator ── */}
             <svg
               width={RADAR.size}
               height={RADAR.size}
@@ -612,7 +633,7 @@ const MainPage = ({
                 position: "absolute",
                 left: `${currentHighlight.x}%`,
                 top: `${currentHighlight.y}%`,
-                transform: `translate(-50%, -50%)`,
+                transform: "translate(-50%, -50%)",
                 pointerEvents: "none",
                 zIndex: 20,
                 overflow: "visible",
@@ -621,55 +642,53 @@ const MainPage = ({
               }}
             >
               <defs>
-                {/* Cone fill: warm centre → transparent edge */}
+                {/* Cone: dark brown at centre → medium brown → fades out */}
                 <radialGradient id="rdrConeFill" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%"   stopColor="#c17f59" stopOpacity="1"    />
-                  <stop offset="20%"  stopColor="#c17f59" stopOpacity="0.75" />
-                  <stop offset="50%"  stopColor="#d4a574" stopOpacity="0.4"  />
-                  <stop offset="80%"  stopColor="#E8C4A0" stopOpacity="0.12" />
-                  <stop offset="100%" stopColor="#E8C4A0" stopOpacity="0"    />
+                  <stop offset="0%"   stopColor="#2c1e14" stopOpacity="0.95" />
+                  <stop offset="20%"  stopColor="#3d2a1c" stopOpacity="0.8"  />
+                  <stop offset="45%"  stopColor="#5c3d28" stopOpacity="0.55" />
+                  <stop offset="70%"  stopColor="#7a5640" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#8b6450" stopOpacity="0"    />
                 </radialGradient>
 
-                {/* Brighter inner cone overlay for depth */}
-                <radialGradient id="rdrConeHighlight" cx="50%" cy="50%" r="40%">
-                  <stop offset="0%"   stopColor="#fff"    stopOpacity="0.2"  />
-                  <stop offset="40%"  stopColor="#fff"    stopOpacity="0.05" />
-                  <stop offset="100%" stopColor="#fff"    stopOpacity="0"    />
+                {/* Warm highlight at centre for depth */}
+                <radialGradient id="rdrConeInner" cx="50%" cy="50%" r="30%">
+                  <stop offset="0%"   stopColor="#4a3020" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#4a3020" stopOpacity="0"   />
                 </radialGradient>
 
-                {/* Subtle outer glow for the dot */}
-                <radialGradient id="rdrDotGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%"   stopColor="#c17f59" stopOpacity="0.5"  />
-                  <stop offset="60%"  stopColor="#c17f59" stopOpacity="0.15" />
-                  <stop offset="100%" stopColor="#c17f59" stopOpacity="0"    />
+                {/* Halo around dot — dark brown glow */}
+                <radialGradient id="rdrHaloGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%"   stopColor="#3d2a1c" stopOpacity="0.6"  />
+                  <stop offset="50%"  stopColor="#3d2a1c" stopOpacity="0.2"  />
+                  <stop offset="100%" stopColor="#3d2a1c" stopOpacity="0"    />
                 </radialGradient>
 
-                {/* Soft blur for the cone body */}
-                <filter id="rdrSoftBlur">
-                  <feGaussianBlur stdDeviation="1" />
+                {/* Soft blur for cone */}
+                <filter id="rdrBlur">
+                  <feGaussianBlur stdDeviation="0.8" />
                 </filter>
 
-                {/* Crisp edge glow */}
+                {/* Edge glow */}
                 <filter id="rdrEdgeGlow">
-                  <feGaussianBlur stdDeviation="0.6" />
+                  <feGaussianBlur stdDeviation="0.5" />
                 </filter>
 
-                {/* Drop shadow for the centre dot */}
-                <filter id="rdrDotShadow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3" />
+                {/* Strong dark shadow under the dot */}
+                <filter id="rdrDotShadow" x="-80%" y="-80%" width="260%" height="260%">
+                  <feDropShadow dx="0" dy="0.5" stdDeviation="2" floodColor="#1a1008" floodOpacity="0.55" />
                 </filter>
               </defs>
 
-              {/* 1. Ambient halo — breathes gently behind everything */}
+              {/* 1. Ambient halo — dark brown breathing glow */}
               <circle
-                cx={cx}
-                cy={cy}
+                cx={cx} cy={cy}
                 r={RADAR.haloRadius}
-                fill="url(#rdrDotGlow)"
-                style={{ animation: "radarHaloBreath 3s ease-in-out infinite" }}
+                fill="url(#rdrHaloGlow)"
+                style={{ animation: "rdrHaloBreath 2.8s ease-in-out infinite" }}
               />
 
-              {/* 2. Cone group — rotates via ref (updated every RAF frame) */}
+              {/* 2. Cone group — rotates via ref */}
               <g
                 ref={radarGroupRef}
                 style={{
@@ -677,102 +696,90 @@ const MainPage = ({
                   willChange: "transform",
                 }}
               >
-                {/* 2a. Main cone fill — soft-blurred */}
+                {/* 2a. Main cone — dark brown, slightly blurred */}
                 <g
-                  filter="url(#rdrSoftBlur)"
-                  style={{ animation: "radarConePulse 2.8s ease-in-out infinite" }}
+                  filter="url(#rdrBlur)"
+                  style={{ animation: "rdrConePulse 2.8s ease-in-out infinite" }}
                 >
                   <path d={wedgePath} fill="url(#rdrConeFill)" />
                 </g>
 
-                {/* 2b. Inner highlight overlay — adds luminance depth */}
-                <path
-                  d={wedgePath}
-                  fill="url(#rdrConeHighlight)"
-                  opacity="0.6"
+                {/* 2b. Inner overlay for added density */}
+                <path d={wedgePath} fill="url(#rdrConeInner)" opacity="0.8" />
+
+                {/* 2c. Left edge — dark brown line */}
+                <line
+                  x1={cx} y1={cy}
+                  x2={edgeLines.left.x} y2={edgeLines.left.y}
+                  stroke="#3d2a1c"
+                  strokeWidth="1.2"
+                  opacity="0.7"
+                  filter="url(#rdrEdgeGlow)"
                 />
 
-                {/* 2c. Left edge line — thin bright border */}
-                {(() => {
-                  const half = (RADAR.coneSpread / 2) * (Math.PI / 180);
-                  const ex = cx + Math.sin(-half) * RADAR.coneRadius;
-                  const ey = cy - Math.cos(-half) * RADAR.coneRadius;
-                  return (
-                    <line
-                      x1={cx} y1={cy} x2={ex} y2={ey}
-                      stroke="#E8C4A0"
-                      strokeWidth="0.8"
-                      opacity="0.5"
-                      filter="url(#rdrEdgeGlow)"
-                    />
-                  );
-                })()}
-
-                {/* 2d. Right edge line */}
-                {(() => {
-                  const half = (RADAR.coneSpread / 2) * (Math.PI / 180);
-                  const ex = cx + Math.sin(half) * RADAR.coneRadius;
-                  const ey = cy - Math.cos(half) * RADAR.coneRadius;
-                  return (
-                    <line
-                      x1={cx} y1={cy} x2={ex} y2={ey}
-                      stroke="#E8C4A0"
-                      strokeWidth="0.8"
-                      opacity="0.5"
-                      filter="url(#rdrEdgeGlow)"
-                    />
-                  );
-                })()}
+                {/* 2d. Right edge */}
+                <line
+                  x1={cx} y1={cy}
+                  x2={edgeLines.right.x} y2={edgeLines.right.y}
+                  stroke="#3d2a1c"
+                  strokeWidth="1.2"
+                  opacity="0.7"
+                  filter="url(#rdrEdgeGlow)"
+                />
               </g>
 
-              {/* 3. Expanding pulse ring 1 — terracotta tint */}
+              {/* 3. Pulse ring 1 — dark brown */}
               <circle
-                cx={cx}
-                cy={cy}
+                cx={cx} cy={cy}
                 r={RADAR.dotRadius + RADAR.dotStroke + 1}
                 fill="none"
-                stroke="#c17f59"
-                strokeWidth="1.5"
+                stroke="#3d2a1c"
+                strokeWidth="1.8"
                 opacity="0"
-                style={{ animation: "radarRingExpand 2.6s ease-out infinite" }}
+                style={{ animation: "rdrRingPulse1 2.6s ease-out infinite" }}
               />
 
-              {/* 4. Expanding pulse ring 2 — staggered, lighter */}
+              {/* 4. Pulse ring 2 — staggered, lighter brown */}
               <circle
-                cx={cx}
-                cy={cy}
+                cx={cx} cy={cy}
                 r={RADAR.dotRadius + RADAR.dotStroke + 1}
                 fill="none"
-                stroke="#E8C4A0"
+                stroke="#5c3d28"
                 strokeWidth="1"
                 opacity="0"
-                style={{ animation: "radarRingExpand2 2.6s ease-out 1.3s infinite" }}
+                style={{ animation: "rdrRingPulse2 2.6s ease-out 1.3s infinite" }}
               />
 
-              {/* 5. Outer white ring with shadow */}
+              {/* 5. Dark shadow backdrop for the dot */}
               <circle
-                cx={cx}
-                cy={cy}
-                r={RADAR.dotRadius + RADAR.dotStroke}
-                fill="#f5f0eb"
+                cx={cx} cy={cy}
+                r={RADAR.dotRadius + RADAR.dotStroke + 1}
+                fill="#2c1e14"
+                opacity="0.4"
                 filter="url(#rdrDotShadow)"
               />
 
-              {/* 6. Terracotta centre dot */}
+              {/* 6. Outer white ring — crisp contrast */}
               <circle
-                cx={cx}
-                cy={cy}
-                r={RADAR.dotRadius}
-                fill="#c17f59"
+                cx={cx} cy={cy}
+                r={RADAR.dotRadius + RADAR.dotStroke}
+                fill="#f5f0eb"
               />
 
-              {/* 7. Tiny specular highlight on dot */}
+              {/* 7. Dark brown centre dot */}
+              <circle
+                cx={cx} cy={cy}
+                r={RADAR.dotRadius}
+                fill="#3d2a1c"
+              />
+
+              {/* 8. Specular highlight */}
               <circle
                 cx={cx - 1.5}
                 cy={cy - 1.5}
                 r="1.5"
                 fill="#fff"
-                opacity="0.35"
+                opacity="0.4"
               />
             </svg>
           </div>
@@ -781,7 +788,7 @@ const MainPage = ({
 
       {/* Bottom line */}
       <div
-        className="absolute bottom-0 left-0 right-0 pointer-events-none"
+        className="absolute bottom-0 right-0 left-0 pointer-events-none"
         style={{ zIndex: 15 }}
       >
         <div
