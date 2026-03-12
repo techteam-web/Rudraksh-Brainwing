@@ -7,6 +7,28 @@ const ZOOM_STEP = 0.3;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 
+// ── Floor-plan hotspot markers ──
+// Each entry maps to a scene in panoConfig; x/y are % positions on the plan image.
+const FLOORPLAN_HOTSPOTS = {
+  "4bhk": [
+    { id: "9-living-camera-1",   label: "Living",          x: 50,   y: 45   },
+    { id: "8-living-camera-2",   label: "Dining",          x: 37,   y: 45   },
+    { id: "11-kitchen-1",        label: "Kitchen",         x: 51,   y: 59   },
+    { id: "17-master-bedroom-1", label: "Master Bedroom",  x: 74,   y: 46   },
+    { id: "21-bedroom1-1",       label: "Bedroom 1",       x: 67,   y: 58   },
+    { id: "13-bedroom2-1",       label: "Bedroom 2",       x: 27,   y: 65   },
+    { id: "0-bedroom3-1",        label: "Bedroom 3",       x: 30,   y: 35.5 },
+  ],
+  "3bhk": [
+    { id: "18-living-area",          label: "Living",         x: 50, y: 40 },
+    { id: "1-dining1-view-1",        label: "Dining",         x: 62, y: 45 },
+    { id: "19-kitchen-view-1",       label: "Kitchen",        x: 68, y: 54 },
+    { id: "6-masterbedroom-view-1",  label: "Master Bedroom", x: 28, y: 54 },
+    { id: "15-bedroom1-view-1",      label: "Bedroom 1",      x: 48, y: 54 },
+    { id: "13-bedroom2-view-1",      label: "Bedroom 2",      x: 82, y: 54 },
+  ],
+};
+
 const FloorPlanPage = ({
   onClose,
   onRoomSelect,
@@ -24,8 +46,12 @@ const FloorPlanPage = ({
   // Pan & zoom state
   const viewportRef = useRef(null);
   const imageWrapRef = useRef(null);
+  const imgRef = useRef(null);
   const scaleRef = useRef(1);
   const posRef = useRef({ x: 0, y: 0 });
+  const [imgBounds, setImgBounds] = useState(null);
+
+  const hotspots = FLOORPLAN_HOTSPOTS[bhkType] || [];
   const dragRef = useRef({
     active: false,
     startX: 0,
@@ -163,6 +189,35 @@ const FloorPlanPage = ({
     [animateZoom]
   );
 
+  // ── Measure image bounds for hotspot positioning ──
+  const measureImage = useCallback(() => {
+    const img = imgRef.current;
+    const wrap = imageWrapRef.current;
+    if (!img || !wrap || !img.naturalWidth) return;
+
+    const containerW = wrap.clientWidth;
+    const containerH = wrap.clientHeight;
+    const scale = Math.min(
+      containerW / img.naturalWidth,
+      containerH / img.naturalHeight
+    );
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+
+    setImgBounds({
+      x: (containerW - w) / 2,
+      y: (containerH - h) / 2,
+      w,
+      h,
+    });
+  }, []);
+
+  useEffect(() => {
+    const ro = new ResizeObserver(measureImage);
+    if (imageWrapRef.current) ro.observe(imageWrapRef.current);
+    return () => ro.disconnect();
+  }, [measureImage]);
+
   // ── Pinch zoom (touch) ──
   const lastPinchDist = useRef(null);
 
@@ -224,6 +279,7 @@ const FloorPlanPage = ({
         gsap.set(controlsRef.current, { opacity: 0, y: 10 });
         gsap.set(".particle", { opacity: 0 });
         gsap.set(".floor-plan-title", { opacity: 0, y: -15 });
+        gsap.set(".floorplan-hotspot", { opacity: 0, scale: 0 });
 
         const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
 
@@ -246,6 +302,11 @@ const FloorPlanPage = ({
           .to(closeRef.current, { opacity: 1, x: 0, duration: 0.5 }, 0.3)
           .to(controlsRef.current, { opacity: 1, y: 0, duration: 0.4 }, 0.4)
           .to(".sound-controls", { opacity: 1, x: 0, duration: 0.4 }, 0.5)
+          .to(
+            ".floorplan-hotspot",
+            { opacity: 1, scale: 1, stagger: 0.08, duration: 0.4, ease: "back.out(1.7)" },
+            0.6
+          )
           .to(
             ".particle",
             { opacity: 0.3, stagger: 0.1, duration: 0.5 },
@@ -301,6 +362,22 @@ const FloorPlanPage = ({
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Marcellus&display=swap');
+
+        @keyframes fpPulse {
+          0%   { r: 10; opacity: 0.7; }
+          70%  { opacity: 0.1; }
+          100% { r: 22; opacity: 0; }
+        }
+        .fp-pulse-ring {
+          animation: fpPulse 2s ease-out infinite;
+        }
+        .floorplan-hotspot:hover .floorplan-hotspot-svg {
+          transform: scale(1.15);
+          transition: transform 0.2s ease;
+        }
+        .floorplan-hotspot-svg {
+          transition: transform 0.2s ease;
+        }
       `}</style>
 
       {/* Particles */}
@@ -412,18 +489,103 @@ const FloorPlanPage = ({
           >
             <div
               ref={imageWrapRef}
-              className="w-full h-full flex items-center justify-center"
+              className="w-full h-full flex items-center justify-center relative"
               style={{
                 willChange: "transform",
                 transformOrigin: "center center",
               }}
             >
               <img
+                ref={imgRef}
                 src={floorplanImage}
                 alt={`${bhkType.toUpperCase()} Floor Plan`}
                 className="max-w-full max-h-full object-contain select-none"
                 draggable={false}
+                onLoad={measureImage}
               />
+
+              {/* ── Hotspot markers ── */}
+              {imgBounds &&
+                hotspots.map((spot) => (
+                  <div
+                    key={spot.id}
+                    className="floorplan-hotspot"
+                    style={{
+                      position: "absolute",
+                      left: imgBounds.x + (spot.x / 100) * imgBounds.w,
+                      top: imgBounds.y + (spot.y / 100) * imgBounds.h,
+                      transform: "translate(-50%, -50%)",
+                      zIndex: 5,
+                      cursor: "pointer",
+                      pointerEvents: "auto",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRoomSelect(spot.id);
+                    }}
+                  >
+                    <svg
+                      width="48"
+                      height="48"
+                      viewBox="0 0 48 48"
+                      className="floorplan-hotspot-svg"
+                    >
+                      {/* Pulse ring */}
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="10"
+                        fill="none"
+                        stroke="rgba(255,255,255,0.6)"
+                        strokeWidth="2"
+                        className="fp-pulse-ring"
+                      />
+                      {/* Outer glow */}
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="10"
+                        fill="rgba(193,127,89,0.25)"
+                      />
+                      {/* Main circle */}
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="7"
+                        fill="rgba(193,127,89,0.9)"
+                        stroke="white"
+                        strokeWidth="2"
+                      />
+                      {/* Inner dot */}
+                      <circle cx="24" cy="24" r="2.5" fill="white" />
+                    </svg>
+
+                    {/* Tooltip label */}
+                    <span
+                      className="fp-label text-[8px] sm:text-[10px] md:text-[11px] px-1.5 sm:px-2 md:px-2.5 py-0.5 sm:py-1"
+                      style={{
+                        position: "absolute",
+                        left: "50%",
+                        top: "100%",
+                        transform: "translateX(-50%)",
+                        marginTop: "2px",
+                        whiteSpace: "nowrap",
+                        fontWeight: 600,
+                        fontFamily: "'Cinzel', serif",
+                        letterSpacing: "0.08em",
+                        color: "#fff",
+                        backgroundColor: "rgba(146, 120, 103, 0.88)",
+                        borderRadius: "4px",
+                        backdropFilter: "blur(6px)",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {spot.label}
+                    </span>
+                  </div>
+                ))}
             </div>
           </div>
 
