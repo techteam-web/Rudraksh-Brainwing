@@ -76,7 +76,7 @@ const panoConfig = {
         scenes: [
           {
             id: "9-living-camera-1",
-            label: "Living Camera 1",
+            label: "Living Area",
             tilesPath: "/assets/4bhk/pano/living/9-living-camera-1",
             preview: "/assets/4bhk/pano/living/9-living-camera-1/preview.jpg",
             levels: LEVELS_2K,
@@ -96,14 +96,14 @@ const panoConfig = {
           },
           {
             id: "8-living-camera-2",
-            label: "Living Camera 2",
+            label: "Dining Area",
             tilesPath: "/assets/4bhk/pano/living/8-living-camera-2",
             preview: "/assets/4bhk/pano/living/8-living-camera-2/preview.jpg",
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
-            initialView: { yaw: -2.214048618140458, pitch: 0, fov: 1.4479588735060953 },
+            initialView: { yaw: 0.404048618140458, pitch: 0, fov: 1.4479588735060953 },
             minimapPos: { x: 37, y: 45 },
-            radarNorthOffset: 170,
+            radarNorthOffset: 145,
             linkHotspots: [
               { yaw: -1.0408554318441503, pitch: 0.34294671528529364, rotation: 0, target: "9-living-camera-1" },
               { yaw: -2.760543135671579, pitch: 0.3023445786116987, rotation: 0, target: "7-living-camera-3" },
@@ -117,14 +117,14 @@ const panoConfig = {
           },
           {
             id: "7-living-camera-3",
-            label: "Living Camera 3",
+            label: "Living Area",
             tilesPath: "/assets/4bhk/pano/living/7-living-camera-3",
             preview: "/assets/4bhk/pano/living/7-living-camera-3/preview.jpg",
             levels: LEVELS_2K,
             faceSize: DEFAULT_FACE_SIZE,
             initialView: { yaw: -0.388338079119869, pitch: 0, fov: 1.4479588735060953 },
             minimapPos: { x: 37, y: 30 },
-            radarNorthOffset: 165,
+            radarNorthOffset: 140,
             linkHotspots: [
               { yaw: 0.4908657123915088, pitch: 0.47797858557975026, rotation: 0, target: "8-living-camera-2" },
               { yaw: -0.3253901885269954, pitch: 0.12371290458823836, rotation: 0, target: "9-living-camera-1" },
@@ -135,7 +135,7 @@ const panoConfig = {
           },
           {
             id: "4-foyar-1",
-            label: "Foyer 1",
+            label: "Foyer Area",
             tilesPath: "/assets/4bhk/pano/living/4-foyar-1",
             preview: "/assets/4bhk/pano/living/4-foyar-1/preview.jpg",
             levels: LEVELS_2K,
@@ -149,12 +149,12 @@ const panoConfig = {
               { yaw: -2.6445273113212124, pitch: 0.25904740381480273, rotation: 0, target: "5-foyar-2" },
               { yaw: 2.277031920586773, pitch: 0.013909768096556974, rotation: 0, target: "0-bedroom3-1" },
               { yaw: -1.0590848490796851, pitch: 0.21433711120654486, rotation: 0, target: "17-master-bedroom-1" },
-              { yaw: -0.8179863012485382, pitch: 0.30436437470637614, rotation: 0, target: "21-bedroom1-1" }
+              { yaw: -0.8179863012485382, pitch: 0.3043643747063761, rotation: 0, target: "21-bedroom1-1" }
             ],
           },
           {
             id: "5-foyar-2",
-            label: "Foyer 2",
+            label: "Foyer Area",
             tilesPath: "/assets/4bhk/pano/living/5-foyar-2",
             preview: "/assets/4bhk/pano/living/5-foyar-2/preview.jpg",
             levels: LEVELS_2K,
@@ -194,7 +194,7 @@ const panoConfig = {
         scenes: [
           {
             id: "11-kitchen-1",
-            label: "Kitchen 1",
+            label: "Kitchen",
             tilesPath: "/assets/4bhk/pano/kitchen/11-kitchen-1",
             preview: "/assets/4bhk/pano/kitchen/11-kitchen-1/preview.jpg",
             levels: LEVELS_2K,
@@ -211,7 +211,7 @@ const panoConfig = {
           },
           {
             id: "10-kitchen-2",
-            label: "Kitchen 2",
+            label: "Kitchen",
             tilesPath: "/assets/4bhk/pano/kitchen/10-kitchen-2",
             preview: "/assets/4bhk/pano/kitchen/10-kitchen-2/preview.jpg",
             levels: LEVELS_2K,
@@ -240,7 +240,7 @@ const panoConfig = {
             scenes: [
               {
                 id: "21-bedroom1-1",
-                label: "Bedroom 1 — View 1",
+                label: "Bedroom 1",
                 tilesPath: "/assets/4bhk/pano/bedrooms/bedroom-1/21-bedroom1-1",
                 preview: "/assets/4bhk/pano/bedrooms/bedroom-1/21-bedroom1-1/preview.jpg",
                 levels: LEVELS_2K,
@@ -256,7 +256,7 @@ const panoConfig = {
               },
               {
                 id: "24-bedroom1-2",
-                label: "Bedroom 1 — View 2",
+                label: "Bedroom 1",
                 tilesPath: "/assets/4bhk/pano/bedrooms/bedroom-1/24-bedroom1-2",
                 preview: "/assets/4bhk/pano/bedrooms/bedroom-1/24-bedroom1-2/preview.jpg",
                 levels: LEVELS_2K,
@@ -312,7 +312,7 @@ const panoConfig = {
             scenes: [
               {
                 id: "13-bedroom2-1",
-                label: "Bedroom 2 — View 1",
+                label: "Bedroom 2",
                 tilesPath: "/assets/4bhk/pano/bedrooms/bedroom-2/13-bedroom2-1",
                 preview: "/assets/4bhk/pano/bedrooms/bedroom-2/13-bedroom2-1/preview.jpg",
                 levels: LEVELS_2K,
@@ -330,7 +330,7 @@ const panoConfig = {
               },
               {
                 id: "12-bedroom2-2",
-                label: "Bedroom 2 — View 2",
+                label: "Bedroom 2",
                 tilesPath: "/assets/4bhk/pano/bedrooms/bedroom-2/12-bedroom2-2",
                 preview: "/assets/4bhk/pano/bedrooms/bedroom-2/12-bedroom2-2/preview.jpg",
                 levels: LEVELS_2K,
@@ -399,7 +399,7 @@ const panoConfig = {
             scenes: [
               {
                 id: "0-bedroom3-1",
-                label: "Bedroom 3 — View 1",
+                label: "Bedroom 3",
                 tilesPath: "/assets/4bhk/pano/bedrooms/bedroom-3/0-bedroom3-1",
                 preview: "/assets/4bhk/pano/bedrooms/bedroom-3/0-bedroom3-1/preview.jpg",
                 levels: LEVELS_2K,
@@ -415,7 +415,7 @@ const panoConfig = {
               },
               {
                 id: "3-bedroom3-2",
-                label: "Bedroom 3 — View 2",
+                label: "Bedroom 3",
                 tilesPath: "/assets/4bhk/pano/bedrooms/bedroom-3/3-bedroom3-2",
                 preview: "/assets/4bhk/pano/bedrooms/bedroom-3/3-bedroom3-2/preview.jpg",
                 levels: LEVELS_2K,
@@ -484,7 +484,7 @@ const panoConfig = {
               },
               {
                 id: "20-master-bedroom-2",
-                label: "Master Bedroom 2",
+                label: "Master Bedroom",
                 tilesPath: "/assets/4bhk/pano/bedrooms/master-bedroom/20-master-bedroom-2",
                 preview: "/assets/4bhk/pano/bedrooms/master-bedroom/20-master-bedroom-2/preview.jpg",
                 levels: LEVELS_2K,
@@ -510,7 +510,7 @@ const panoConfig = {
                 radarNorthOffset: 90,
                 linkHotspots: [
                   { yaw: 0.18382966776930765, pitch: 0.5756774349750238, rotation: 0, target: "18-4bhk-masterbedroom-bathroom" },
-                  { yaw: 1.8586383231702719, pitch: 0.5437131301938552, rotation: 0, target: "20-master-bedroom-2" },
+                  { yaw: 1.8586383231702719, pitch: 0.543713130193855, rotation: 0, target: "20-master-bedroom-2" },
                 ],
               },
               {
@@ -566,7 +566,7 @@ const panoConfig = {
           },
           {
             id: "1-dining1-view-1",
-            label: "Dining — View 1",
+            label: "Dining Area",
             tilesPath: "/assets/3bhk/pano/dining/1-dining1-view-1",
             preview: "/assets/3bhk/pano/dining/1-dining1-view-1/preview.jpg",
             levels: LEVELS_2K,
@@ -582,7 +582,7 @@ const panoConfig = {
           },
           {
             id: "0-dining1-view-2",
-            label: "Dining — View 2",
+            label: "Dining Area",
             tilesPath: "/assets/3bhk/pano/dining/0-dining1-view-2",
             preview: "/assets/3bhk/pano/dining/0-dining1-view-2/preview.jpg",
             levels: LEVELS_2K,
@@ -625,7 +625,7 @@ const panoConfig = {
         scenes: [
           {
             id: "3-foyar-2",
-            label: "Foyer 2",
+            label: "Foyer Area",
             tilesPath: "/assets/3bhk/pano/foyar/3-foyar-2",
             preview: "/assets/3bhk/pano/foyar/3-foyar-2/preview.jpg",
             levels: LEVELS_2K,
@@ -643,7 +643,7 @@ const panoConfig = {
           },
           {
             id: "2-foyar-1",
-            label: "Foyer 1",
+            label: "Foyer Area",
             tilesPath: "/assets/3bhk/pano/foyar/2-foyar-1",
             preview: "/assets/3bhk/pano/foyar/2-foyar-1/preview.jpg",
             levels: LEVELS_2K,
@@ -668,7 +668,7 @@ const panoConfig = {
         scenes: [
           {
             id: "19-kitchen-view-1",
-            label: "Kitchen — View 1",
+            label: "Kitchen",
             tilesPath: "/assets/3bhk/pano/kitchen/19-kitchen-view-1",
             preview: "/assets/3bhk/pano/kitchen/19-kitchen-view-1/preview.jpg",
             levels: LEVELS_2K,
@@ -677,14 +677,14 @@ const panoConfig = {
             minimapPos: { x: 68, y: 54 },    // ← placeholder
             radarNorthOffset: 180,              // ← placeholder
             linkHotspots: [
-              { yaw: 1.1120716678897406, pitch: 0.4717842250223683, rotation: 0, target: "17-kitchen-view-2" },
+              { yaw: 1.112071667889740, pitch: 0.4717842250223683, rotation: 0, target: "17-kitchen-view-2" },
               { yaw: 2.724749239015847, pitch: 0.4850006299037144, rotation: 0, target: "1-dining1-view-1" },
               { yaw: -2.638022483631236, pitch: 0.41145203901698046, rotation: 0, target: "0-dining1-view-2" },
             ],
           },
           {
             id: "17-kitchen-view-2",
-            label: "Kitchen — View 2",
+            label: "Kitchen",
             tilesPath: "/assets/3bhk/pano/kitchen/17-kitchen-view-2",
             preview: "/assets/3bhk/pano/kitchen/17-kitchen-view-2/preview.jpg",
             levels: LEVELS_2K,
@@ -714,7 +714,7 @@ const panoConfig = {
             scenes: [
               {
                 id: "6-masterbedroom-view-1",
-                label: "Master Bedroom — View 1",
+                label: "Master Bedroom Area",
                 tilesPath: "/assets/3bhk/pano/bedrooms/master-bedroom/6-masterbedroom-view-1",
                 preview: "/assets/3bhk/pano/bedrooms/master-bedroom/6-masterbedroom-view-1/preview.jpg",
                 levels: LEVELS_2K,
@@ -732,7 +732,7 @@ const panoConfig = {
               },
               {
                 id: "7-masterbedroom-view-2",
-                label: "Master Bedroom — View 2",
+                label: "Master Bedroom Area",
                 tilesPath: "/assets/3bhk/pano/bedrooms/master-bedroom/7-masterbedroom-view-2",
                 preview: "/assets/3bhk/pano/bedrooms/master-bedroom/7-masterbedroom-view-2/preview.jpg",
                 levels: LEVELS_2K,
@@ -751,7 +751,7 @@ const panoConfig = {
               },
               {
                 id: "8-masterbedroom-view-3",
-                label: "Master Bedroom — View 3",
+                label: "Master Bedroom",
                 tilesPath: "/assets/3bhk/pano/bedrooms/master-bedroom/8-masterbedroom-view-3",
                 preview: "/assets/3bhk/pano/bedrooms/master-bedroom/8-masterbedroom-view-3/preview.jpg",
                 levels: LEVELS_2K,
@@ -777,7 +777,7 @@ const panoConfig = {
                 minimapPos: { x: 15, y: 67 },    // ← placeholder
                 radarNorthOffset: 200,              // ← placeholder
                 linkHotspots: [
-                  { yaw: -1.4736692065766075, pitch: 0.5629571862970551, rotation: 0, target: "8-masterbedroom-view-3" },
+                  { yaw: -1.4736692065766075, pitch: 0.562957186297055, rotation: 0, target: "8-masterbedroom-view-3" },
                 ],
               },
               {
@@ -806,7 +806,7 @@ const panoConfig = {
             scenes: [
               {
                 id: "15-bedroom1-view-1",
-                label: "Bedroom 1 — View 1",
+                label: "Bedroom 1",
                 tilesPath: "/assets/3bhk/pano/bedrooms/bedroom-1/15-bedroom1-view-1",
                 preview: "/assets/3bhk/pano/bedrooms/bedroom-1/15-bedroom1-view-1/preview.jpg",
                 levels: LEVELS_2K,
@@ -823,7 +823,7 @@ const panoConfig = {
               },
               {
                 id: "4-bedroom1-view-2",
-                label: "Bedroom 1 — View 2",
+                label: "Bedroom 1",
                 tilesPath: "/assets/3bhk/pano/bedrooms/bedroom-1/4-bedroom1-view-2",
                 preview: "/assets/3bhk/pano/bedrooms/bedroom-1/4-bedroom1-view-2/preview.jpg",
                 levels: LEVELS_2K,
@@ -839,7 +839,7 @@ const panoConfig = {
               },
               {
                 id: "11-bedroom1-dresser-1",
-                label: "Bedroom 1 — Dresser",
+                label: "Bedroom 1",
                 tilesPath: "/assets/3bhk/pano/bedrooms/bedroom-1/11-bedroom1-dresser-1",
                 preview: "/assets/3bhk/pano/bedrooms/bedroom-1/11-bedroom1-dresser-1/preview.jpg",
                 levels: LEVELS_2K,
@@ -894,7 +894,7 @@ const panoConfig = {
               },
               {
                 id: "5-bedroom2-view-2",
-                label: "Bedroom 2 — View 2",
+                label: "Bedroom 2",
                 tilesPath: "/assets/3bhk/pano/bedrooms/bedroom-2/5-bedroom2-view-2",
                 preview: "/assets/3bhk/pano/bedrooms/bedroom-2/5-bedroom2-view-2/preview.jpg",
                 levels: LEVELS_2K,
