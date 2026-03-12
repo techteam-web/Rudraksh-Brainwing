@@ -26,7 +26,13 @@ const FloorPlanPage = ({
   const imageWrapRef = useRef(null);
   const scaleRef = useRef(1);
   const posRef = useRef({ x: 0, y: 0 });
-  const dragRef = useRef({ active: false, startX: 0, startY: 0, originX: 0, originY: 0 });
+  const dragRef = useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  });
   const [zoomLevel, setZoomLevel] = useState(1);
 
   const handleClick = () => {
@@ -65,7 +71,6 @@ const FloorPlanPage = ({
     const vh = viewport.clientHeight;
     const s = scaleRef.current;
 
-    // At scale 1, allow no panning. At higher scales, allow proportional panning.
     const maxPanX = Math.max(0, (vw * (s - 1)) / 2);
     const maxPanY = Math.max(0, (vh * (s - 1)) / 2);
 
@@ -74,20 +79,23 @@ const FloorPlanPage = ({
   }, []);
 
   // ── Zoom helpers ──
-  const animateZoom = useCallback((newScale) => {
-    const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
-    scaleRef.current = clamped;
-    clampPosition();
-    setZoomLevel(clamped);
+  const animateZoom = useCallback(
+    (newScale) => {
+      const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
+      scaleRef.current = clamped;
+      clampPosition();
+      setZoomLevel(clamped);
 
-    gsap.to(imageWrapRef.current, {
-      x: posRef.current.x,
-      y: posRef.current.y,
-      scale: clamped,
-      duration: 0.35,
-      ease: "power2.out",
-    });
-  }, [clampPosition]);
+      gsap.to(imageWrapRef.current, {
+        x: posRef.current.x,
+        y: posRef.current.y,
+        scale: clamped,
+        duration: 0.35,
+        ease: "power2.out",
+      });
+    },
+    [clampPosition]
+  );
 
   const handleZoomIn = useCallback(() => {
     animateZoom(scaleRef.current + ZOOM_STEP);
@@ -125,58 +133,72 @@ const FloorPlanPage = ({
     if (viewportRef.current) viewportRef.current.style.cursor = "grabbing";
   }, []);
 
-  const onPointerMove = useCallback((e) => {
-    if (!dragRef.current.active) return;
-    const cx = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-    const cy = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-    posRef.current.x = dragRef.current.originX + (cx - dragRef.current.startX);
-    posRef.current.y = dragRef.current.originY + (cy - dragRef.current.startY);
-    clampPosition();
-    applyTransform();
-  }, [clampPosition, applyTransform]);
+  const onPointerMove = useCallback(
+    (e) => {
+      if (!dragRef.current.active) return;
+      const cx = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+      const cy = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+      posRef.current.x = dragRef.current.originX + (cx - dragRef.current.startX);
+      posRef.current.y = dragRef.current.originY + (cy - dragRef.current.startY);
+      clampPosition();
+      applyTransform();
+    },
+    [clampPosition, applyTransform]
+  );
 
   const onPointerUp = useCallback(() => {
     dragRef.current.active = false;
-    if (viewportRef.current) viewportRef.current.style.cursor = scaleRef.current > 1 ? "grab" : "default";
+    if (viewportRef.current)
+      viewportRef.current.style.cursor =
+        scaleRef.current > 1 ? "grab" : "default";
   }, []);
 
   // ── Mouse wheel zoom ──
-  const onWheel = useCallback((e) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
-    animateZoom(scaleRef.current + delta);
-  }, [animateZoom]);
+  const onWheel = useCallback(
+    (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+      animateZoom(scaleRef.current + delta);
+    },
+    [animateZoom]
+  );
 
   // ── Pinch zoom (touch) ──
   const lastPinchDist = useRef(null);
 
-  const onTouchStart = useCallback((e) => {
-    if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      lastPinchDist.current = Math.hypot(dx, dy);
-    } else if (e.touches.length === 1 && scaleRef.current > 1) {
-      onPointerDown(e);
-    }
-  }, [onPointerDown]);
+  const onTouchStart = useCallback(
+    (e) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastPinchDist.current = Math.hypot(dx, dy);
+      } else if (e.touches.length === 1 && scaleRef.current > 1) {
+        onPointerDown(e);
+      }
+    },
+    [onPointerDown]
+  );
 
-  const onTouchMove = useCallback((e) => {
-    if (e.touches.length === 2 && lastPinchDist.current !== null) {
-      e.preventDefault();
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.hypot(dx, dy);
-      const diff = dist - lastPinchDist.current;
-      lastPinchDist.current = dist;
-      const newScale = scaleRef.current + diff * 0.008;
-      scaleRef.current = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
-      clampPosition();
-      setZoomLevel(scaleRef.current);
-      applyTransform();
-    } else if (e.touches.length === 1) {
-      onPointerMove(e);
-    }
-  }, [clampPosition, applyTransform, onPointerMove]);
+  const onTouchMove = useCallback(
+    (e) => {
+      if (e.touches.length === 2 && lastPinchDist.current !== null) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        const diff = dist - lastPinchDist.current;
+        lastPinchDist.current = dist;
+        const newScale = scaleRef.current + diff * 0.008;
+        scaleRef.current = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
+        clampPosition();
+        setZoomLevel(scaleRef.current);
+        applyTransform();
+      } else if (e.touches.length === 1) {
+        onPointerMove(e);
+      }
+    },
+    [clampPosition, applyTransform, onPointerMove]
+  );
 
   const onTouchEnd = useCallback(() => {
     lastPinchDist.current = null;
@@ -197,19 +219,25 @@ const FloorPlanPage = ({
       const ctx = gsap.context(() => {
         gsap.set(logoContainerRef.current, { opacity: 0, x: -30 });
         gsap.set(closeRef.current, { opacity: 0, x: 30 });
-        gsap.set(".floor-plan-container", { opacity: 0, scale: 0.95 });
+        gsap.set(".floor-plan-container", { opacity: 0, scale: 0.97 });
         gsap.set(".sound-controls", { opacity: 0, x: -20 });
         gsap.set(controlsRef.current, { opacity: 0, y: 10 });
         gsap.set(".particle", { opacity: 0 });
+        gsap.set(".floor-plan-title", { opacity: 0, y: -15 });
 
         const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
 
         tl.to(
-            ".floor-plan-container",
-            { opacity: 1, scale: 1, duration: 0.6 },
-            0.2
+          ".floor-plan-container",
+          { opacity: 1, scale: 1, duration: 0.6 },
+          0.2
+        )
+          .to(".floor-plan-title", { opacity: 1, y: 0, duration: 0.5 }, 0.35)
+          .to(
+            logoContainerRef.current,
+            { opacity: 1, x: 0, duration: 0.5 },
+            0.3
           )
-          .to(logoContainerRef.current, { opacity: 1, x: 0, duration: 0.5 }, 0.3)
           .add(() => {
             if (logoRef.current?.animateIn) {
               logoRef.current.animateIn({ duration: 0.3, ease: "power2.out" });
@@ -218,7 +246,11 @@ const FloorPlanPage = ({
           .to(closeRef.current, { opacity: 1, x: 0, duration: 0.5 }, 0.3)
           .to(controlsRef.current, { opacity: 1, y: 0, duration: 0.4 }, 0.4)
           .to(".sound-controls", { opacity: 1, x: 0, duration: 0.4 }, 0.5)
-          .to(".particle", { opacity: 0.3, stagger: 0.1, duration: 0.5 }, 0.6);
+          .to(
+            ".particle",
+            { opacity: 0.3, stagger: 0.1, duration: 0.5 },
+            0.6
+          );
 
         gsap.utils.toArray(".particle").forEach((particle, i) => {
           gsap.to(particle, {
@@ -333,35 +365,42 @@ const FloorPlanPage = ({
 
       {/* Main Content */}
       <main
-        className="flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 md:px-16"
+        className="flex-1 min-h-0 flex flex-col items-center justify-center"
         style={{ zIndex: 10 }}
       >
+        {/* Title */}
+        <div className="flex-none text-center mb-4 floor-plan-title">
+          <h2
+            className="text-xl sm:text-2xl md:text-3xl font-light"
+            style={{
+              fontFamily: "'Cinzel', serif",
+              letterSpacing: "0.08em",
+              color: colors.textPrimary,
+            }}
+          >
+            {bhkType.toUpperCase()} FLOOR PLAN
+          </h2>
+        </div>
+
+        {/* Floor Plan wrapper with radial bg + top/bottom fade overlays */}
         <div
-          className="floor-plan-container w-full h-full max-h-full max-w-5xl flex flex-col justify-center rounded-2xl overflow-hidden p-4 sm:p-6 md:p-8"
+          className="floor-plan-container w-full flex-1 min-h-0 max-w-6xl relative"
           style={{
-            background: "rgba(230, 216, 204, 0.2)",
-            border: "1px solid rgba(245, 240, 235, 0.12)",
-            boxShadow: "0 25px 70px rgba(0, 0, 0, 0.15)",
+            opacity: 0,
+            background: `radial-gradient(
+              ellipse 70% 70% at 50% 50%,
+              rgba(230, 216, 204, 0.22) 0%,
+              rgba(230, 216, 204, 0.18) 25%,
+              rgba(230, 216, 204, 0.10) 50%,
+              rgba(230, 216, 204, 0.04) 70%,
+              transparent 100%
+            )`,
           }}
         >
-          {/* Title */}
-          <div className="flex-none text-center mb-3">
-            <h2
-              className="text-xl sm:text-2xl md:text-3xl font-light"
-              style={{
-                fontFamily: "'Cinzel', serif",
-                letterSpacing: "0.08em",
-                color: colors.textPrimary,
-              }}
-            >
-              {bhkType.toUpperCase()} FLOOR PLAN
-            </h2>
-          </div>
-
-          {/* Floor Plan Image — pannable & zoomable viewport */}
+          {/* Pannable / zoomable image area */}
           <div
             ref={viewportRef}
-            className="flex-1 min-h-0 w-full relative overflow-hidden rounded-xl"
+            className="w-full h-full overflow-hidden"
             style={{ cursor: zoomLevel > 1 ? "grab" : "default" }}
             onMouseDown={onPointerDown}
             onMouseMove={onPointerMove}
@@ -374,22 +413,53 @@ const FloorPlanPage = ({
             <div
               ref={imageWrapRef}
               className="w-full h-full flex items-center justify-center"
-              style={{ willChange: "transform", transformOrigin: "center center" }}
+              style={{
+                willChange: "transform",
+                transformOrigin: "center center",
+              }}
             >
               <img
                 src={floorplanImage}
                 alt={`${bhkType.toUpperCase()} Floor Plan`}
-                className="max-w-full max-h-full object-contain drop-shadow-lg select-none"
+                className="max-w-full max-h-full object-contain select-none"
                 draggable={false}
               />
             </div>
           </div>
+
+          {/* Top gradient fade — dissolves the image top edge into the page */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "22%",
+              background: `linear-gradient(to bottom, ${colors.bg} 0%, ${colors.bg}CC 20%, ${colors.bg}66 50%, transparent 100%)`,
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
+
+          {/* Bottom gradient fade — dissolves the image bottom edge into the page */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "22%",
+              background: `linear-gradient(to top, ${colors.bg} 0%, ${colors.bg}CC 20%, ${colors.bg}66 50%, transparent 100%)`,
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
         </div>
       </main>
 
       {/* Footer */}
       <div
-        className="flex-none px-4 md:px-10 pb-4 sm:pb-5 md:pb-6 pt-2"
+        className="flex-none px-4 md:px-10 pb-4 sm:pb-5 md:pb-6 pt-3"
         style={{ zIndex: 20 }}
       >
         <div className="flex items-end justify-between">

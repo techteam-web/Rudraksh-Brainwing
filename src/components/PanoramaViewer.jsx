@@ -10,6 +10,11 @@ import { findSceneById } from "../data/panoConfig";
  *   onHotspotClick — (targetSceneId) => void
  *   onViewChange   — ({ yaw, pitch, fov }) => void  — fires on every frame while panning
  */
+
+// ── Keyboard panning config ──
+const KEY_PAN_SPEED = 0.03; // radians per frame at 60fps
+const KEY_PITCH_LIMIT = Math.PI / 2 - 0.05; // prevent flipping past poles
+
 const PanoramaViewer = ({ sceneConfig, bhkType, onHotspotClick, onViewChange }) => {
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
@@ -19,6 +24,47 @@ const PanoramaViewer = ({ sceneConfig, bhkType, onHotspotClick, onViewChange }) 
   useEffect(() => {
     onViewChangeRef.current = onViewChange;
   }, [onViewChange]);
+
+  // Track currently-held arrow keys for smooth continuous panning
+  const keysHeldRef = useRef(new Set());
+  const viewRef = useRef(null); // Marzipano RectilinearView
+
+  // ── Keyboard handlers (attached to window) ──
+  useEffect(() => {
+    const ARROW_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+
+    const onKeyDown = (e) => {
+      if (!ARROW_KEYS.has(e.key)) return;
+      // Prevent page scroll while panning
+      e.preventDefault();
+      keysHeldRef.current.add(e.key);
+
+      // Stop autorotate when the user starts using keys
+      if (viewerRef.current) {
+        viewerRef.current.stopMovement();
+      }
+    };
+
+    const onKeyUp = (e) => {
+      if (!ARROW_KEYS.has(e.key)) return;
+      e.preventDefault();
+      keysHeldRef.current.delete(e.key);
+    };
+
+    // Clear all keys if the window loses focus (prevents stuck keys)
+    const onBlur = () => keysHeldRef.current.clear();
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+      keysHeldRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (!sceneConfig) return;
@@ -251,6 +297,9 @@ const PanoramaViewer = ({ sceneConfig, bhkType, onHotspotClick, onViewChange }) 
           limiter
         );
 
+        // Store view ref for keyboard panning
+        viewRef.current = view;
+
         const source = Marzipano.ImageUrlSource.fromString(
           sceneConfig.tilesPath + "/{z}/{f}/{y}/{x}.jpg",
           { cubeMapPreviewUrl: sceneConfig.preview }
@@ -275,18 +324,38 @@ const PanoramaViewer = ({ sceneConfig, bhkType, onHotspotClick, onViewChange }) 
 
         scene.switchTo();
 
-        // ── Live view change → radar rotation ──────────────
-        // RAF loop guarantees the radar tracks autorotate, user drag,
-        // and inertia — React state batching can't drop frames.
+        // ── Live view change + keyboard panning ──────────────
+        // RAF loop: apply keyboard velocity, then report view to parent.
         const pollView = () => {
           if (!isMounted) return;
-          if (onViewChangeRef.current) {
+
+          // ── Apply keyboard panning ──
+          const keys = keysHeldRef.current;
+          if (keys.size > 0 && viewRef.current) {
+            let yaw = viewRef.current.yaw();
+            let pitch = viewRef.current.pitch();
+
+            if (keys.has("ArrowLeft"))  yaw   -= KEY_PAN_SPEED;
+            if (keys.has("ArrowRight")) yaw   += KEY_PAN_SPEED;
+            if (keys.has("ArrowUp"))    pitch -= KEY_PAN_SPEED;
+            if (keys.has("ArrowDown"))  pitch += KEY_PAN_SPEED;
+
+            // Clamp pitch to avoid flipping
+            pitch = Math.max(-KEY_PITCH_LIMIT, Math.min(KEY_PITCH_LIMIT, pitch));
+
+            viewRef.current.setYaw(yaw);
+            viewRef.current.setPitch(pitch);
+          }
+
+          // ── Report to parent (radar, etc.) ──
+          if (onViewChangeRef.current && viewRef.current) {
             onViewChangeRef.current({
-              yaw: view.yaw(),
-              pitch: view.pitch(),
-              fov: view.fov(),
+              yaw: viewRef.current.yaw(),
+              pitch: viewRef.current.pitch(),
+              fov: viewRef.current.fov(),
             });
           }
+
           rafId = requestAnimationFrame(pollView);
         };
         rafId = requestAnimationFrame(pollView);
@@ -328,6 +397,7 @@ const PanoramaViewer = ({ sceneConfig, bhkType, onHotspotClick, onViewChange }) 
 
     return () => {
       isMounted = false;
+      viewRef.current = null;
       if (rafId) cancelAnimationFrame(rafId);
       cleanupTimers.forEach((timer) => clearTimeout(timer));
       if (viewerRef.current) {

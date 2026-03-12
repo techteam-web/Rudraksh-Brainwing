@@ -30,6 +30,7 @@ const MainPage = ({
   initialRoom,
   bhkType = "4bhk",
   isReady = true,
+  onSceneChange,
 }) => {
   const containerRef = useRef(null);
   const logoRef = useRef(null);
@@ -80,7 +81,21 @@ const MainPage = ({
       : "/assets/4bhk/floorplan/4BHK PLAN Main.webp";
   }, [bhkType]);
 
+  // ── Initialize scene: restore from initialRoom or fall back to default ──
   useEffect(() => {
+    // Try restoring the scene the user was viewing before
+    if (initialRoom) {
+      const result = findSceneById(bhkType, initialRoom);
+      if (result) {
+        setActiveCategory(result.categoryId);
+        setActiveSubcategory(result.subcategoryId);
+        setActiveSceneId(result.scene.id);
+        setActiveSceneConfig(result.scene);
+        return;
+      }
+    }
+
+    // Fall back to default scene
     const defaultScene = getDefaultScene(bhkType);
     if (defaultScene) {
       setActiveCategory(defaultScene.categoryId);
@@ -88,7 +103,14 @@ const MainPage = ({
       setActiveSceneId(defaultScene.scene.id);
       setActiveSceneConfig(defaultScene.scene);
     }
-  }, [bhkType]);
+  }, [bhkType, initialRoom]);
+
+  // ── Notify parent whenever the active scene changes ──
+  useEffect(() => {
+    if (activeSceneId && onSceneChange) {
+      onSceneChange(activeSceneId);
+    }
+  }, [activeSceneId, onSceneChange]);
 
   const transitionToScene = useCallback(
     (newScene, categoryId, subcategoryId) => {
@@ -642,7 +664,6 @@ const MainPage = ({
               }}
             >
               <defs>
-                {/* Cone: dark brown at centre → medium brown → fades out */}
                 <radialGradient id="rdrConeFill" cx="50%" cy="50%" r="50%">
                   <stop offset="0%"   stopColor="#2c1e14" stopOpacity="0.95" />
                   <stop offset="20%"  stopColor="#3d2a1c" stopOpacity="0.8"  />
@@ -651,36 +672,30 @@ const MainPage = ({
                   <stop offset="100%" stopColor="#8b6450" stopOpacity="0"    />
                 </radialGradient>
 
-                {/* Warm highlight at centre for depth */}
                 <radialGradient id="rdrConeInner" cx="50%" cy="50%" r="30%">
                   <stop offset="0%"   stopColor="#4a3020" stopOpacity="0.3" />
                   <stop offset="100%" stopColor="#4a3020" stopOpacity="0"   />
                 </radialGradient>
 
-                {/* Halo around dot — dark brown glow */}
                 <radialGradient id="rdrHaloGlow" cx="50%" cy="50%" r="50%">
                   <stop offset="0%"   stopColor="#3d2a1c" stopOpacity="0.6"  />
                   <stop offset="50%"  stopColor="#3d2a1c" stopOpacity="0.2"  />
                   <stop offset="100%" stopColor="#3d2a1c" stopOpacity="0"    />
                 </radialGradient>
 
-                {/* Soft blur for cone */}
                 <filter id="rdrBlur">
                   <feGaussianBlur stdDeviation="0.8" />
                 </filter>
 
-                {/* Edge glow */}
                 <filter id="rdrEdgeGlow">
                   <feGaussianBlur stdDeviation="0.5" />
                 </filter>
 
-                {/* Strong dark shadow under the dot */}
                 <filter id="rdrDotShadow" x="-80%" y="-80%" width="260%" height="260%">
                   <feDropShadow dx="0" dy="0.5" stdDeviation="2" floodColor="#1a1008" floodOpacity="0.55" />
                 </filter>
               </defs>
 
-              {/* 1. Ambient halo — dark brown breathing glow */}
               <circle
                 cx={cx} cy={cy}
                 r={RADAR.haloRadius}
@@ -688,7 +703,6 @@ const MainPage = ({
                 style={{ animation: "rdrHaloBreath 2.8s ease-in-out infinite" }}
               />
 
-              {/* 2. Cone group — rotates via ref */}
               <g
                 ref={radarGroupRef}
                 style={{
@@ -696,7 +710,6 @@ const MainPage = ({
                   willChange: "transform",
                 }}
               >
-                {/* 2a. Main cone — dark brown, slightly blurred */}
                 <g
                   filter="url(#rdrBlur)"
                   style={{ animation: "rdrConePulse 2.8s ease-in-out infinite" }}
@@ -704,10 +717,8 @@ const MainPage = ({
                   <path d={wedgePath} fill="url(#rdrConeFill)" />
                 </g>
 
-                {/* 2b. Inner overlay for added density */}
                 <path d={wedgePath} fill="url(#rdrConeInner)" opacity="0.8" />
 
-                {/* 2c. Left edge — dark brown line */}
                 <line
                   x1={cx} y1={cy}
                   x2={edgeLines.left.x} y2={edgeLines.left.y}
@@ -717,7 +728,6 @@ const MainPage = ({
                   filter="url(#rdrEdgeGlow)"
                 />
 
-                {/* 2d. Right edge */}
                 <line
                   x1={cx} y1={cy}
                   x2={edgeLines.right.x} y2={edgeLines.right.y}
@@ -728,7 +738,6 @@ const MainPage = ({
                 />
               </g>
 
-              {/* 3. Pulse ring 1 — dark brown */}
               <circle
                 cx={cx} cy={cy}
                 r={RADAR.dotRadius + RADAR.dotStroke + 1}
@@ -739,7 +748,6 @@ const MainPage = ({
                 style={{ animation: "rdrRingPulse1 2.6s ease-out infinite" }}
               />
 
-              {/* 4. Pulse ring 2 — staggered, lighter brown */}
               <circle
                 cx={cx} cy={cy}
                 r={RADAR.dotRadius + RADAR.dotStroke + 1}
@@ -750,7 +758,6 @@ const MainPage = ({
                 style={{ animation: "rdrRingPulse2 2.6s ease-out 1.3s infinite" }}
               />
 
-              {/* 5. Dark shadow backdrop for the dot */}
               <circle
                 cx={cx} cy={cy}
                 r={RADAR.dotRadius + RADAR.dotStroke + 1}
@@ -759,21 +766,18 @@ const MainPage = ({
                 filter="url(#rdrDotShadow)"
               />
 
-              {/* 6. Outer white ring — crisp contrast */}
               <circle
                 cx={cx} cy={cy}
                 r={RADAR.dotRadius + RADAR.dotStroke}
                 fill="#f5f0eb"
               />
 
-              {/* 7. Dark brown centre dot */}
               <circle
                 cx={cx} cy={cy}
                 r={RADAR.dotRadius}
                 fill="#3d2a1c"
               />
 
-              {/* 8. Specular highlight */}
               <circle
                 cx={cx - 1.5}
                 cy={cy - 1.5}

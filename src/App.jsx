@@ -15,6 +15,13 @@ const AppContent = () => {
 
   const pendingNavRef = useRef(null);
 
+  // ── Track last active scene per bhkType ──
+  const lastSceneRef = useRef({});
+
+  const handleSceneChange = useCallback((bhkType, sceneId) => {
+    lastSceneRef.current[bhkType] = sceneId;
+  }, []);
+
   // Hide prompt if already fullscreen or when fullscreen is entered externally
   useEffect(() => {
     const onFSChange = () => {
@@ -71,6 +78,12 @@ const AppContent = () => {
     navigateWithTransition(path, roomId);
   }, [navigateWithTransition, location.pathname]);
 
+  // ── Return to MainPage from FloorPlan, restoring last scene ──
+  const handleFloorPlanClose = useCallback((bhkType) => {
+    const lastScene = lastSceneRef.current[bhkType] || null;
+    navigateToMain(bhkType, lastScene);
+  }, [navigateToMain]);
+
   const handleMidpoint = useCallback(() => {
     if (pendingNavRef.current) {
       navigate(pendingNavRef.current);
@@ -103,6 +116,7 @@ const AppContent = () => {
               onFloorPlanClick={() => navigateToFloorPlan('4bhk')}
               initialRoom={getInitialRoom()}
               bhkType="4bhk"
+              onSceneChange={(sceneId) => handleSceneChange('4bhk', sceneId)}
             />
           }
         />
@@ -114,6 +128,7 @@ const AppContent = () => {
               onFloorPlanClick={() => navigateToFloorPlan('3bhk')}
               initialRoom={getInitialRoom()}
               bhkType="3bhk"
+              onSceneChange={(sceneId) => handleSceneChange('3bhk', sceneId)}
             />
           }
         />
@@ -121,7 +136,7 @@ const AppContent = () => {
           path="/4bhk/floorplan"
           element={
             <FloorPlanPage
-              onClose={() => navigateToMain('4bhk')}
+              onClose={() => handleFloorPlanClose('4bhk')}
               onRoomSelect={handleRoomSelect}
               bhkType="4bhk"
             />
@@ -131,7 +146,7 @@ const AppContent = () => {
           path="/3bhk/floorplan"
           element={
             <FloorPlanPage
-              onClose={() => navigateToMain('3bhk')}
+              onClose={() => handleFloorPlanClose('3bhk')}
               onRoomSelect={handleRoomSelect}
               bhkType="3bhk"
             />
