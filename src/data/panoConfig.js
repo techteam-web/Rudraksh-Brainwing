@@ -878,7 +878,7 @@ const panoConfig = {
             scenes: [
               {
                 id: "13-bedroom2-view-1",
-                label: "Bedroom 2 — View 1",
+                label: "Bedroom 2",
                 tilesPath: "/assets/3bhk/pano/bedrooms/bedroom-2/13-bedroom2-view-1",
                 preview: "/assets/3bhk/pano/bedrooms/bedroom-2/13-bedroom2-view-1/preview.jpg",
                 levels: LEVELS_2K,
