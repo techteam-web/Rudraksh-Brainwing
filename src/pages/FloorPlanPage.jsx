@@ -276,6 +276,7 @@ const FloorPlanPage = ({
         gsap.set(closeRef.current, { opacity: 0, x: 30 });
         gsap.set(".floor-plan-container", { opacity: 0, scale: 0.97 });
         gsap.set(".sound-controls", { opacity: 0, x: -20 });
+        gsap.set(".bhk-toggler", { opacity: 0, x: 20 });
         gsap.set(controlsRef.current, { opacity: 0, y: 10 });
         gsap.set(".particle", { opacity: 0 });
         gsap.set(".floor-plan-title", { opacity: 0, y: -15 });
@@ -302,6 +303,7 @@ const FloorPlanPage = ({
           .to(closeRef.current, { opacity: 1, x: 0, duration: 0.5 }, 0.3)
           .to(controlsRef.current, { opacity: 1, y: 0, duration: 0.4 }, 0.4)
           .to(".sound-controls", { opacity: 1, x: 0, duration: 0.4 }, 0.5)
+          .to(".bhk-toggler", { opacity: 1, x: 0, duration: 0.4 }, 0.5)
           .to(
             ".floorplan-hotspot",
             { opacity: 1, scale: 1, stagger: 0.08, duration: 0.4, ease: "back.out(1.7)" },
@@ -768,8 +770,41 @@ const FloorPlanPage = ({
             </button>
           </div>
 
-          {/* Spacer to balance layout on desktop */}
-          <div className="w-10 hidden sm:block" />
+          {/* BHK Toggler */}
+          <div
+            className="bhk-toggler flex items-center rounded-full p-0.5"
+            style={{
+              background: "rgba(125, 102, 88, 0.6)",
+              backdropFilter: "blur(14px)",
+              border: "1px solid rgba(245, 240, 235, 0.15)",
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
+            }}
+          >
+            <button
+              onClick={() => { if (bhkType !== "3bhk") navigate("/3bhk/floorplan"); }}
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-medium transition-all duration-200"
+              style={{
+                fontFamily: "'Cinzel', serif",
+                letterSpacing: "0.06em",
+                color: colors.textPrimary,
+                backgroundColor: bhkType === "3bhk" ? "rgba(245, 240, 235, 0.2)" : "transparent",
+              }}
+            >
+              3 BHK
+            </button>
+            <button
+              onClick={() => { if (bhkType !== "4bhk") navigate("/4bhk/floorplan"); }}
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-medium transition-all duration-200"
+              style={{
+                fontFamily: "'Cinzel', serif",
+                letterSpacing: "0.06em",
+                color: colors.textPrimary,
+                backgroundColor: bhkType === "4bhk" ? "rgba(245, 240, 235, 0.2)" : "transparent",
+              }}
+            >
+              4 BHK
+            </button>
+          </div>
         </div>
       </div>
     </div>
