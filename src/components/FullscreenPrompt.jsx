@@ -1,36 +1,126 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import { gsap } from 'gsap';
 
-const FullscreenPrompt = ({ onEnter }) => {
-  const [exiting, setExiting] = useState(false);
+const FullscreenPrompt = () => {
   const overlayRef = useRef(null);
   const contentRef = useRef(null);
+  const isAnimating = useRef(false);
+  const isVisible = useRef(!document.fullscreenElement);
 
-  const handleClick = () => {
-    if (exiting) return;
-    setExiting(true);
+  // ── Show the overlay (slide down into view) ──
+  const showOverlay = useCallback(() => {
+    if (isAnimating.current || isVisible.current) return;
+    isVisible.current = true;
+    isAnimating.current = true;
 
-    const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    else if (el.msRequestFullscreen) el.msRequestFullscreen();
+    const overlay = overlayRef.current;
+    const content = contentRef.current;
+    if (!overlay || !content) return;
+
+    overlay.style.pointerEvents = 'auto';
+    gsap.set(overlay, { yPercent: -100 });
+    gsap.set(content, { opacity: 0, y: -30 });
 
     const tl = gsap.timeline({
-      onComplete: () => onEnter(),
+      onComplete: () => { isAnimating.current = false; },
     });
 
-    // Fade out content first, then slide the overlay up
-    tl.to(contentRef.current, {
+    tl.to(overlay, {
+      yPercent: 0,
+      duration: 0.5,
+      ease: 'power3.out',
+    }).to(content, {
+      opacity: 1,
+      y: 0,
+      duration: 0.35,
+      ease: 'power2.out',
+    }, '-=0.15');
+  }, []);
+
+  // ── Hide the overlay (slide up out of view) ──
+  const hideOverlay = useCallback(() => {
+    if (isAnimating.current || !isVisible.current) return;
+    isVisible.current = false;
+    isAnimating.current = true;
+
+    const overlay = overlayRef.current;
+    const content = contentRef.current;
+    if (!overlay || !content) return;
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        isAnimating.current = false;
+        if (overlay) overlay.style.pointerEvents = 'none';
+      },
+    });
+
+    tl.to(content, {
       opacity: 0,
       y: -30,
       duration: 0.3,
       ease: 'power2.in',
-    }).to(overlayRef.current, {
+    }).to(overlay, {
       yPercent: -100,
       duration: 0.6,
       ease: 'power3.inOut',
     });
-  };
+  }, []);
+
+  // ── Listen for fullscreen changes ──
+  useEffect(() => {
+    const onFSChange = () => {
+      if (document.fullscreenElement) {
+        hideOverlay();
+      } else {
+        showOverlay();
+      }
+    };
+
+    // Intercept F11: prevent browser-native fullscreen, use API instead
+    const onKeyDown = (e) => {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        } else {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+        // fullscreenchange event will handle show/hide
+      }
+    };
+
+    document.addEventListener('fullscreenchange', onFSChange);
+    document.addEventListener('webkitfullscreenchange', onFSChange);
+    document.addEventListener('keydown', onKeyDown);
+
+    // Set initial state without animation
+    if (document.fullscreenElement) {
+      gsap.set(overlayRef.current, { yPercent: -100 });
+      if (overlayRef.current) overlayRef.current.style.pointerEvents = 'none';
+      isVisible.current = false;
+    }
+
+    return () => {
+      document.removeEventListener('fullscreenchange', onFSChange);
+      document.removeEventListener('webkitfullscreenchange', onFSChange);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [hideOverlay, showOverlay]);
+
+  // ── Request fullscreen on click ──
+  const handleClick = useCallback(async () => {
+    if (isAnimating.current) return;
+
+    const el = document.documentElement;
+    try {
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+      // fullscreenchange event will trigger hideOverlay automatically
+    } catch {
+      // Fullscreen request rejected — overlay stays visible
+    }
+  }, []);
 
   return (
     <div

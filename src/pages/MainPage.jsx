@@ -657,7 +657,7 @@ const MainPage = ({
                 top: `${currentHighlight.y}%`,
                 transform: "translate(-50%, -50%)",
                 pointerEvents: "none",
-                zIndex: 20,
+                zIndex: 5,
                 overflow: "visible",
                 transition:
                   "left 0.5s cubic-bezier(0.4,0,0.2,1), top 0.5s cubic-bezier(0.4,0,0.2,1)",

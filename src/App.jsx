@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import MainPage from './pages/MainPage';
 import FloorPlanPage from './pages/FloorPlanPage';
@@ -11,7 +11,6 @@ const AppContent = () => {
   const location = useLocation();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
 
   const pendingNavRef = useRef(null);
 
@@ -20,24 +19,6 @@ const AppContent = () => {
 
   const handleSceneChange = useCallback((bhkType, sceneId) => {
     lastSceneRef.current[bhkType] = sceneId;
-  }, []);
-
-  // Hide prompt if already fullscreen or when fullscreen is entered externally
-  useEffect(() => {
-    const onFSChange = () => {
-      if (document.fullscreenElement) {
-        setShowFullscreenPrompt(false);
-      }
-    };
-    document.addEventListener('fullscreenchange', onFSChange);
-    document.addEventListener('webkitfullscreenchange', onFSChange);
-
-    if (document.fullscreenElement) setShowFullscreenPrompt(false);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', onFSChange);
-      document.removeEventListener('webkitfullscreenchange', onFSChange);
-    };
   }, []);
 
   const navigateWithTransition = useCallback((path, room = null) => {
@@ -102,9 +83,7 @@ const AppContent = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {showFullscreenPrompt && (
-        <FullscreenPrompt onEnter={() => setShowFullscreenPrompt(false)} />
-      )}
+      <FullscreenPrompt />
 
       <Routes>
         <Route path="/" element={<HomePage onExplore={navigateToMain} />} />
