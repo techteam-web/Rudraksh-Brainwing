@@ -1,7 +1,18 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { gsap } from 'gsap';
 
+// Returns true for iPhone, iPod, and iPad (including iPad Pro which reports as Mac)
+const isIOSDevice = () => {
+  if (/iPhone|iPod/i.test(navigator.userAgent)) return true;
+  if (/iPad/i.test(navigator.userAgent)) return true;
+  // iPad Pro on iOS 13+ reports as "Macintosh" in UA but has multi-touch (real Macs don't)
+  if (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1) return true;
+  return false;
+};
+
 const FullscreenPrompt = () => {
+  // iOS devices don't support the Fullscreen API — skip the prompt entirely
+  if (isIOSDevice()) return null;
   const overlayRef = useRef(null);
   const contentRef = useRef(null);
   const isAnimating = useRef(false);
